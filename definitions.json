@@ -1,0 +1,110 @@
+{
+  "bindings": [],
+  "permissions": [
+    {
+      "configure": "^$",
+      "read": ".*",
+      "write": "^$",
+      "user": "system-reader",
+      "vhost": "/"
+    },
+    {
+      "configure": "^$",
+      "read": ".^",
+      "write": ".*",
+      "user": "system-writer",
+      "vhost": "/"
+    },
+    {
+      "configure": ".*",
+      "read": ".*",
+      "write": ".*",
+      "user": "peeqle",
+      "vhost": "/"
+    },
+    {
+      "configure": ".*",
+      "read": ".*",
+      "write": ".*",
+      "user": "guest",
+      "vhost": "/"
+    }
+  ],
+  "queues": [
+    {
+      "name": "n_email",
+      "vhost": "/",
+      "durable": true,
+      "arguments": {}
+    },
+    {
+      "name": "n_admin",
+      "vhost": "/",
+      "durable": true,
+      "arguments": {}
+    },
+    {
+      "name": "n_global",
+      "vhost": "/",
+      "durable": true,
+      "arguments": {}
+    },
+    {
+      "name": "n_user",
+      "vhost": "/",
+      "durable": true,
+      "arguments": {}
+    }
+  ],
+  "parameters": [],
+  "policies": [],
+  "rabbitmq_version": "4.0.3",
+  "rabbit_version": "4.0.3",
+  "exchanges": [],
+  "users": [
+    {
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "limits": {},
+      "name": "guest",
+      "password_hash": "nloYlOZz/+ybbxHQPfLOhA4uqjM1kdlinhSbO1B64JFazDzs",
+      "tags": [
+        "administrator"
+      ]
+    },
+    {
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "limits": {},
+      "name": "peeqle",
+      "password_hash": "5hNbldExdFuMlQ10Lp6X81AG+jOPo6S5E0BbhiO9dDBP1REa",
+      "tags": [
+        "administrator"
+      ]
+    },
+    {
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "limits": {},
+      "name": "system-reader",
+      "password_hash": "5OaePew8kswNDoJZageSKLRxkY+dhBJpnqt0JjbPsxzuXXCV",
+      "tags": []
+    },
+    {
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "limits": {},
+      "name": "system-writer",
+      "password_hash": "5OaePew8kswNDoJZageSKLRxkY+dhBJpnqt0JjbPsxzuXXCV",
+      "tags": []
+    }
+  ],
+  "vhosts": [
+    {
+      "limits": [],
+      "metadata": {
+        "description": "Default virtual host",
+        "tags": []
+      },
+      "name": "/"
+    }
+  ],
+  "global_parameters": [],
+  "topic_permissions": []
+}

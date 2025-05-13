@@ -1,0 +1,9 @@
+keycloak:
+  realm: revify
+  resource: revify-client
+  credentials:
+    secret: ${KEYCLOAK_SECRET:Ex8R1cLe3CkjyVN34lpM53J8PMxOTwni}
+  bearer-only: true
+  auth-server-url: ${KEYCLOAK_URL:http://localhost:8085}
+  username: revify-admin
+  password: revify-admin

@@ -1,0 +1,7 @@
+messaging:
+  smsby:
+    apiKey: ${SMS_BY_API_KEY}
+    apiSecret: "$$$"
+  vonage:
+    apiKey: ${VONAGE_API_KEY}
+    apiSecret: ${VONAGE_API_SECRET}

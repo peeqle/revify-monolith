@@ -1,0 +1,58 @@
+services:
+  revify-psql:
+    image: postgres:17
+    container_name: postgres
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: revify
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: password
+  revify-mongo:
+    image: mongo:8.0.4
+    container_name: mongo
+    environment:
+      - MONGO_INITDB_DATABASE=files
+      - MONGO_INITDB_ROOT_PASSWORD=bongo
+      - MONGO_INITDB_ROOT_USERNAME=mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+  revify-redis:
+    image: redis:7.4.2
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: [ "redis-server", "--appendonly", "yes" ]
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFINITIONS_FILE: /etc/rabbitmq/definitions.json
+    entrypoint: [ "bin/bash", "/etc/rabbitmq/entrypoint.sh", "/etc/rabbitmq/post-init.sh" ]
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - ./definitions.json:/etc/rabbitmq/definitions.json
+      - ./entrypoint.sh:/etc/rabbitmq/entrypoint.sh
+      - ./post-init.sh:/etc/rabbitmq/post-init.sh
+  kafka:
+    image: bitnami/kafka
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    env_file:
+      - kafka.env
+    environment:
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+volumes:
+  mongo-data:
+  redis-data:
+  rabbitmq-data:
