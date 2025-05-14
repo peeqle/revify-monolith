@@ -1,19 +1,21 @@
 package com.revify.monolith.resource.data.service;
 
 
+import com.mongodb.client.gridfs.GridFSBuckets;
+import com.mongodb.client.gridfs.GridFSFindIterable;
 import com.mongodb.client.gridfs.model.GridFSFile;
 import com.mongodb.client.model.Filters;
-import com.mongodb.reactivestreams.client.gridfs.GridFSBuckets;
+import com.revify.monolith.commons.models.ResourceEntityType;
 import com.revify.monolith.resource.data.models.CustomFile;
 import com.revify.monolith.resource.data.models.FileOptions;
 import com.revify.monolith.resource.utils.FileUtils;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.tika.*;
 import org.apache.tika.exception.TikaException;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.reactivestreams.Publisher;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.MongoDatabaseFactory;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -75,12 +77,12 @@ public class FileService {
             if (metadata != null) {
                 Object fileOptionsObj = metadata.get("fileOptions");
                 if (fileOptionsObj instanceof FileOptions fileOptions) {
-                    Long userId = fileOptions.getUserId();
-                    if (userId != null && userId.equals(userContext.getUserId())) {
-                        metadata.put("active", false);
-                        Document update = new Document("$set", new Document("metadata", metadata));
-                        database.getCollection("fs.files").updateOne(Filters.eq("_id", fileId), update);
-                    }
+//                    Long userId = fileOptions.getUserId();
+//                    if (userId != null && userId.equals(userContext.getUserId())) {
+//                        metadata.put("active", false);
+//                        Document update = new Document("$set", new Document("metadata", metadata));
+//                        database.getCollection("fs.files").updateOne(Filters.eq("_id", fileId), update);
+//                    }
                 }
             }
         }

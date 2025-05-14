@@ -1,12 +1,19 @@
 package com.revify.monolith.resource;
 
+import com.mongodb.client.gridfs.GridFSFindIterable;
+import com.mongodb.client.gridfs.model.GridFSFile;
+import com.revify.monolith.commons.exceptions.UnauthorizedAccessError;
+import com.revify.monolith.commons.files.FileBase64BatchRequestDTO;
+import com.revify.monolith.commons.files.FileBase64DTO;
 import com.revify.monolith.commons.models.ResourceEntityType;
+import com.revify.monolith.resource.data.models.EntityFile;
 import com.revify.monolith.resource.data.models.FileOptions;
 import com.revify.monolith.resource.data.service.FileEntityService;
 import com.revify.monolith.resource.data.service.FileService;
 import io.vavr.Tuple2;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.tika.exception.TikaException;
 import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.gridfs.GridFsResource;
 import org.springframework.http.*;
@@ -100,10 +107,6 @@ public class FileResource {
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
-    @Operation(
-            summary = "Fetch existing file from resource",
-            description = "Fetch multipart file resource",
-            tags = {"files"})
     @GetMapping("/fetchForEntity")
     public ResponseEntity<FileBase64BatchRequestDTO> fetchForEntity(@RequestParam("entityType") String entityType,
                                                                     @RequestParam("entityId") String entityId) {

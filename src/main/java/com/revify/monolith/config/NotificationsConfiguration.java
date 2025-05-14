@@ -31,6 +31,6 @@ public class NotificationsConfiguration {
     public FirebaseApp firebaseApp() {
         Optional<FirebaseApp> first = FirebaseApp.getApps().stream()
                 .filter(e -> Objects.equals(e.getName(), "revi-mono")).findFirst();
-        return first.orElseGet(() -> FirebaseApp.initializeApp(firebaseOptions()));
+        return first.orElseGet(() -> FirebaseApp.initializeApp(firebaseOptions(), "revi-mono"));
     }
 }

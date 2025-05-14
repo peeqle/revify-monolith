@@ -17,7 +17,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FileEntityService {
 
-    private final ReactiveMongoTemplate template;
+    private final MongoTemplate template;
 
     public void saveUserFileRelation(String fileId) {
         saveFileRelation(UserUtils.getKeycloakId(), fileId);
