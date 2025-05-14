@@ -12,7 +12,7 @@ import lombok.RequiredArgsConstructor;
 @AllArgsConstructor
 
 @Entity
-@Table(name = "license", schema = "legal")
+@Table(name = "license", schema = "system")
 public class LicenseModel {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

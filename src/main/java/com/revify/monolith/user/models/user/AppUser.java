@@ -3,17 +3,14 @@ package com.revify.monolith.user.models.user;
 import com.revify.monolith.commons.ElasticContext;
 import com.revify.monolith.commons.models.user.UserRole;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 import org.hibernate.annotations.Cascade;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.util.*;
 
-@Setter
-@Getter
+@Data
 @Entity
-
 @Table(name = "sys_app_user", schema = "system", indexes = {
         @Index(name = "USER_USERNAME_INDEX", columnList = "username", unique = true),
         @Index(name = "USER_PHONE_NUMBER_INDEX", columnList = "user_phone_number", unique = true),

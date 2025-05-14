@@ -6,34 +6,36 @@ spring:
       - classpath:messaging.yml
       - classpath:keycloak.yml
       - classpath:payment.yml
+      - classpath:files.yml
   security:
     oauth2:
       resourceserver:
         jwt:
           jwk-set-uri: ${KEYCLOAK_URL:http://localhost:8085}/realms/revify/protocol/openid-connect/certs
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 20MB
   datasource:
     driver-class-name: org.postgresql.Driver
     password: password
     username: root
     url: ${POSTGRES_URL:jdbc:postgresql://localhost:5433/revify?currentSchema=system}
-    hikari:
-      schema: system
-      driver-class-name: org.postgresql.Driver
-      maximum-pool-size: 10
-      minimum-idle: 1
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
-      jdbc-url: ${POSTGRES_URL:jdbc:postgresql://localhost:5433/revify?currentSchema=system}
-    jpa:
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    properties:
       hibernate:
-        ddl-auto: update
-      properties:
-        hibernate:
-          dialect: org.hibernate.dialect.PostgreSQLDialect
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: system
   data:
+    jpa:
+      repositories:
+        enabled: true
     mongodb:
-      database: revify-mono
+      database: revify
       port: ${MONGODB_PORT:27017}
       host: ${MONGODB_HOST:localhost}
       username: mongo
@@ -66,5 +68,4 @@ server:
     enabled: true
 logging:
   level:
-    org.springframework: info
-    lombok: debug
+    org.apache.kafka: WARN

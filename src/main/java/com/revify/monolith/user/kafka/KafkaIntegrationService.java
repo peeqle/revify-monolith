@@ -27,11 +27,11 @@ public class KafkaIntegrationService {
     }
 
     public void createChatUser(AppUser appUser, String password) {
-        kafkaTemplate.send(CHAT_REGISTRATION, new ChatRegistrationDTO(
-                appUser.getUsername(),
-                appUser.getEmail(),
-                password,
-                appUser.getCommonUserName()
-        ));
+//        kafkaTemplate.send(CHAT_REGISTRATION, gson.toJson(new ChatRegistrationDTO(
+//                appUser.getUsername(),
+//                appUser.getEmail(),
+//                password,
+//                appUser.getCommonUserName()
+//        )));
     }
 }

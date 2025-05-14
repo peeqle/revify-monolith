@@ -1,0 +1,7 @@
+server:
+  files:
+    constant:
+      directory: /opt/revify/files
+    temporary:
+      max-size: 2000000
+      directory: /opt/revify/tmp
