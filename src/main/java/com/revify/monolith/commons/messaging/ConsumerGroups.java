@@ -1,6 +1,7 @@
 package com.revify.monolith.commons.messaging;
 
 public interface ConsumerGroups {
+    String SYSTEM = "system";
     String USER = "user";
     String BIDS = "bids";
     String BIDS_HIGHEST = "bids_highest";

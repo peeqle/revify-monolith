@@ -12,9 +12,9 @@ spring:
           jwk-set-uri: ${KEYCLOAK_URL:http://localhost:8085}/realms/revify/protocol/openid-connect/certs
   datasource:
     driver-class-name: org.postgresql.Driver
-    password: root
-    username: postgres
-    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/revify?currentSchema=system}
+    password: password
+    username: root
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5433/revify?currentSchema=system}
     hikari:
       schema: system
       driver-class-name: org.postgresql.Driver
@@ -23,10 +23,9 @@ spring:
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
-      jdbc-url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/revify?currentSchema=system}
+      jdbc-url: ${POSTGRES_URL:jdbc:postgresql://localhost:5433/revify?currentSchema=system}
     jpa:
       hibernate:
-
         ddl-auto: update
       properties:
         hibernate:
@@ -34,7 +33,7 @@ spring:
   data:
     mongodb:
       database: revify-mono
-      port: ${MONGODB_PORT:27019}
+      port: ${MONGODB_PORT:27017}
       host: ${MONGODB_HOST:localhost}
       username: mongo
       password: bongo
@@ -52,9 +51,6 @@ spring:
         spring.json.trusted.packages: "*"
     listener:
       ack-mode: record
-revify:
-  keycloak:
-    grpc: ${REVIFY_KEYCLOAK_GRPC:localhost:7004}
 
 keycloak:
   client-id: ${KEYCLOAK_ID:client-id}
@@ -62,19 +58,6 @@ keycloak:
   auth-server-url: ${KEYCLOAK_URL:http://localhost:8085}/auth
   realm: ${KEYCLOAK_REALM_NAME:realm-name}
 
-springdoc:
-  api-docs:
-    path: /api-docs
-    enabled: true
-  swagger-ui:
-    disable-swagger-default-url: true
-    enabled: true
-    path: /swagger
-    operations-sorter: method
-
-grpc:
-  server:
-    port: 8002
 server:
   port: 8001
   http2:

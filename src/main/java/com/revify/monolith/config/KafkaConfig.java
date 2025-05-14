@@ -14,7 +14,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.*;
-import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.support.ProducerListener;
 
 import java.util.HashMap;
@@ -84,15 +83,29 @@ public class KafkaConfig {
     public ConcurrentKafkaListenerContainerFactory<String, Object> recipientKafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, Object> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(financialRecipientsConsumerFactory());
-        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
         return factory;
     }
 
-    @Bean()
+    @Bean(name = "billingKafkaListenerContainerFactory")
+    public ConcurrentKafkaListenerContainerFactory<String, Object> billingKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, Object> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(defaultRecipientsConsumerFactory());
+        return factory;
+    }
+
+
+    @Bean
     public ConsumerFactory<String, Object> financialRecipientsConsumerFactory() {
         Map<String, Object> props = new HashMap<>();
-
         props.put(ConsumerConfig.GROUP_ID_CONFIG, ConsumerGroups.RECIPIENTS);
+        defaultKafkaConsumerProperties(props);
+        return new DefaultKafkaConsumerFactory<>(props);
+    }
+
+    @Bean
+    public ConsumerFactory<String, Object> defaultRecipientsConsumerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, ConsumerGroups.SYSTEM);
         defaultKafkaConsumerProperties(props);
         return new DefaultKafkaConsumerFactory<>(props);
     }
@@ -125,9 +138,10 @@ public class KafkaConfig {
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, properties.getBootstrapServers());
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, properties.getConsumer().getKeyDeserializer());
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, properties.getConsumer().getValueDeserializer());
-        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, properties.getConsumer().getEnableAutoCommit());
+        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, properties.getConsumer().getEnableAutoCommit() == null || properties.getConsumer().getEnableAutoCommit());
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, properties.getConsumer().getAutoOffsetReset());
         //осторожно с backpressure на кол во потоков из factory.concurrency
-        props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, properties.getConsumer().getMaxPollRecords());
+        props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, properties.getConsumer().getMaxPollRecords() == null ?
+                ConsumerConfig.DEFAULT_MAX_POLL_RECORDS : properties.getConsumer().getMaxPollRecords());
     }
 }
