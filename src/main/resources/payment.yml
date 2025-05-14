@@ -1,0 +1,3 @@
+payment:
+  processors:
+    global: bePaid

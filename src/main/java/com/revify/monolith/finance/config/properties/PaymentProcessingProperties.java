@@ -13,6 +13,5 @@ import org.springframework.stereotype.Component;
 
 @ConfigurationProperties(prefix = "payment.processors")
 public class PaymentProcessingProperties {
-
     private String global;
 }

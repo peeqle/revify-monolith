@@ -5,6 +5,7 @@ spring:
     import:
       - classpath:messaging.yml
       - classpath:keycloak.yml
+      - classpath:payment.yml
   security:
     oauth2:
       resourceserver:
@@ -38,6 +39,7 @@ spring:
       username: mongo
       password: bongo
       auto-index-creation: true
+      authentication-database: admin
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}

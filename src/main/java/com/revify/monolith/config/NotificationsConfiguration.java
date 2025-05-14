@@ -16,7 +16,7 @@ public class NotificationsConfiguration {
     @Bean
     public FirebaseOptions firebaseOptions() {
         try {
-            ClassPathResource resource = new ClassPathResource("revify-key.json");
+            ClassPathResource resource = new ClassPathResource("revi-mono.json");
             return new FirebaseOptions.Builder()
                     .setCredentials(GoogleCredentials.fromStream(resource.getInputStream()))
                     .build();
