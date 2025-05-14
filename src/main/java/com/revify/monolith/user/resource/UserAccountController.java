@@ -17,6 +17,7 @@ import com.revify.monolith.user.service.phone_messaging.PhoneInteractionService;
 import com.revify.monolith.user.service.util.RequestValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Example;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -48,11 +49,15 @@ public class UserAccountController {
                 kafkaIntegrationService.sendKafkaUserContext(appUser.getCommonUserInfo());
                 kafkaIntegrationService.createChatUser(appUser, registerRequest.getPassword());
 
-                return ResponseEntity.ok(appUser);
+                return ResponseEntity.ok(AppUserDTO.from(appUser));
             } catch (UserCreationException e) {
+                log.warn("User creation exception: {}", registerRequest.getUsername(), e);
                 return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body("User cannot be created");
             } catch (RuntimeException e) {
                 log.warn("User creation exception: {}", registerRequest.getUsername(), e);
+            } catch (Exception e) {
+                log.warn("User creation exception: {}", registerRequest.getUsername(), e);
+                return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body("User cannot be created");
             }
         }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();

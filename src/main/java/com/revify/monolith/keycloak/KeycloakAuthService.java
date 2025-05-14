@@ -1,20 +1,26 @@
 package com.revify.monolith.keycloak;
 
-import com.revify.monolith.commons.exceptions.KeycloakUserNotFound;
 import com.revify.monolith.commons.models.auth.KeycloakLoginRequest;
+import com.revify.monolith.user.models.user.AppUser;
+import com.revify.monolith.user.service.ReadUserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.representations.AccessTokenResponse;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class KeycloakAuthService {
 
     private final KeycloakProvider keycloakProvider;
 
+    private final ReadUserService readUserService;
+
     public TokenResponse login(KeycloakLoginRequest keycloakLoginRequest) {
-        return login(keycloakLoginRequest.username(), keycloakLoginRequest.password());
+        AppUser appUser = readUserService.loadUserByEmail(keycloakLoginRequest.email());
+        return login(appUser.getUsername(), keycloakLoginRequest.password());
     }
 
     public TokenResponse login(String username, String password) {
@@ -26,7 +32,8 @@ public class KeycloakAuthService {
                         accessTokenResponse.getScope());
 
             }
-        } catch (KeycloakUserNotFound e) {
+        } catch (Exception e) {
+            log.warn("Failed to login", e);
             return null;
         }
     }

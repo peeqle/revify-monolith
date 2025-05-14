@@ -135,6 +135,8 @@ public class WriteUserService extends CrudService<AppUser> {
 
         AppUser appUser = new AppUser(registerRequest.getUsername(), registerRequest.getPhoneNumber());
         appUser.setEmail(registerRequest.getEmail());
+        appUser.setFirstName(registerRequest.getFirstName());
+        appUser.setLastName(registerRequest.getLastName());
 
         return appUser;
     }

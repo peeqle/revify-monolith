@@ -29,7 +29,7 @@ public class LoginController {
             return ResponseEntity.status(400).body("Login request body is empty");
         }
 
-        if (!readUserService.isUserActivated(keycloakLoginRequest.username())) {
+        if (!readUserService.isUserActivated(keycloakLoginRequest.email())) {
             return ResponseEntity.status(NOT_ACCEPTABLE).body("User is not activated");
         }
 

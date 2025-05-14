@@ -21,8 +21,18 @@ public class ReadUserService extends CrudService<AppUser> {
         return repository.findById(UserUtils.getUserId());
     }
 
-    public Boolean isUserActivated(String username) {
-        return repository.isUserActivated(username);
+    public Boolean isUserActivated(String email) {
+        return repository.isUserActivated(email);
+    }
+
+    public AppUser loadUserByEmail(String email) {
+        if (email != null && !email.isEmpty()) {
+            Optional<AppUser> appUser = repository.findAppUserByEmail(email);
+            if (appUser.isPresent()) {
+                return appUser.get();
+            }
+        }
+        throw new UsernameNotFoundException("Cannot find user with email: " + email);
     }
 
     public AppUser loadUserByUsername(String username) {

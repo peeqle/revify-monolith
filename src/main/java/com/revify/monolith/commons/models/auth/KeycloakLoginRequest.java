@@ -1,4 +1,4 @@
 package com.revify.monolith.commons.models.auth;
 
-public record KeycloakLoginRequest(String username, String password) {
+public record KeycloakLoginRequest(String email, String password) {
 }

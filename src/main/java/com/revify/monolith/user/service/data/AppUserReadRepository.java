@@ -19,10 +19,11 @@ public interface AppUserReadRepository extends JpaRepository<AppUser, Long> {
 
     boolean existsByEmail(String email);
 
-    @Query("select e.enabled from AppUser e where e.username=:username")
-    boolean isUserActivated(String username);
+    @Query("select e.enabled from AppUser e where e.email=:email")
+    boolean isUserActivated(String email);
 
     Optional<AppUser> findAppUserByUsername(String username);
+    Optional<AppUser> findAppUserByEmail(String email);
 
     List<AppUser> findAllByUsernameIsLikeIgnoreCase(String pattern);
 
