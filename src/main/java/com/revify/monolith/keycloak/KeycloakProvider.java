@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.keycloak.OAuth2Constants;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
+import org.keycloak.admin.client.resource.RealmResource;
 import org.springframework.stereotype.Component;
 
 @Getter
@@ -44,6 +45,10 @@ public class KeycloakProvider {
                 .clientSecret(String.valueOf(keycloakConfigProperties.getCredentials().getSecret()))
                 .grantType(OAuth2Constants.PASSWORD)
                 .build();
+    }
+
+    public RealmResource getResource() {
+        return getInstance().realm(keycloakConfigProperties.getRealm());
     }
 
     public Tuple2<String, String> realmTokens() {

@@ -44,6 +44,12 @@ public class LoginController {
         return ResponseEntity.status(NOT_ACCEPTABLE).build();
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<Boolean> logout() {
+        return ResponseEntity.ok(keycloakAuthService.logout());
+    }
+
+
     @PostMapping("/refresh")
     public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest request) {
         try {
