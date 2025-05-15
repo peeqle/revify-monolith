@@ -1,0 +1,72 @@
+package com.revify.monolith.items.utils;
+
+import com.revify.monolith.commons.finance.Price;
+import com.revify.monolith.commons.geolocation.GeoLocation;
+import com.revify.monolith.commons.items.ItemCreationDTO;
+import com.revify.monolith.commons.items.ItemDTO;
+import com.revify.monolith.commons.items.ItemDescriptionDTO;
+import com.revify.monolith.items.model.item.Item;
+import com.revify.monolith.items.model.item.ItemDescription;
+import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
+
+import java.time.Instant;
+import java.util.Collections;
+
+//USER ID SET EXPLICITLY
+public class ItemUtils {
+
+    public static ItemDTO from(Item item) {
+        return new ItemDTO(
+                item.getId().toHexString(),
+                item.getCreatorId(),
+                ItemDescriptionDTO.builder()
+                        .description(item.getItemDescription().getDescription())
+                        .destination(item.getItemDescription().getDestination())
+                        .title(item.getItemDescription().getTitle())
+                        .maximumRequiredBidPrice(item.getItemDescription().getMaximumRequiredBidPrice())
+                        .build(),
+                Collections.emptyList(),
+                new Price.Builder()
+                        .withAmount(item.getPrice().getAmount())
+                        .withCurrency(item.getPrice().getCurrency()).build(),
+                item.getCreatedAt(),
+                item.getUpdatedAt(),
+                item.getValidUntil(),
+                item.isActive()
+        );
+    }
+
+    public static Item from(ItemCreationDTO itemCreation) {
+        Item item = new Item();
+
+        item.setCreatedAt(Instant.now().toEpochMilli());
+        item.setUpdatedAt(Instant.now().toEpochMilli());
+
+        item.setValidUntil(itemCreation.validUntil());
+        item.setPrice(itemCreation.price());
+
+        GeoLocation destination = new GeoLocation();
+        destination.setCountryCode(itemCreation.description().getDestination().getCountryCode());
+        destination.setPlaceName(itemCreation.description().getDestination().getPlaceName());
+        destination.setLocation(new GeoJsonPoint(itemCreation.latitude(), itemCreation.longitude()));
+
+        item.setActive(true);
+        item.setItemDescription(
+                ItemDescription.builder()
+                        .description(itemCreation.description().getDescription())
+                        .title(itemCreation.description().getTitle())
+
+                        .url(itemCreation.description().getUrl())
+                        .category(itemCreation.description().getCategory())
+                        .shopReference(itemCreation.description().getShopReference())
+
+                        .compositeStackingEnabled(itemCreation.description().getCompositeStackingEnabled())
+
+                        .destination(destination)
+                        .maximumRequiredBidPrice(itemCreation.description().getMaximumRequiredBidPrice())
+                        .build()
+        );
+
+        return item;
+    }
+}

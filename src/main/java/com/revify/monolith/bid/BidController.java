@@ -16,6 +16,7 @@ import reactor.util.function.Tuples;
 
 @Slf4j
 @RestController
+@RequestMapping("/bids")
 @RequiredArgsConstructor
 
 @PreAuthorize("hasRole('ROLE_USER')")

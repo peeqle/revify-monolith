@@ -66,6 +66,10 @@ public class ReadUserService extends CrudService<AppUser> {
         return repository.findAllBlockedBy(keycloakUserId);
     }
 
+    public List<Long> findAllBlockedBy(Long userId) {
+        return repository.findAllBlockedBy(userId);
+    }
+
     public boolean emailExists(String email) {
         return repository.existsByEmail(email);
     }

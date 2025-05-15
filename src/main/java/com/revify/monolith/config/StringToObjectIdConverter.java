@@ -1,4 +1,4 @@
-package com.revify.monolith.bid.util;
+package com.revify.monolith.config;
 
 import org.bson.types.ObjectId;
 import org.springframework.core.convert.converter.Converter;

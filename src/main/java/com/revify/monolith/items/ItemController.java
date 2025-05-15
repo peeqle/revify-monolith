@@ -1,0 +1,73 @@
+package com.revify.monolith.items;
+
+import com.revify.monolith.commons.items.ItemCreationDTO;
+import com.revify.monolith.commons.items.ItemDTO;
+import com.revify.monolith.commons.items.ItemUpdatesDTO;
+import com.revify.monolith.items.service.item.ItemReadService;
+import com.revify.monolith.items.service.item.ItemService;
+import com.revify.monolith.items.service.item.ItemWriteService;
+import com.revify.monolith.items.utils.ItemUtils;
+import lombok.RequiredArgsConstructor;
+import org.bson.types.ObjectId;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+@RestController
+@RequestMapping("/item")
+@RequiredArgsConstructor
+@PreAuthorize("hasRole('ROLE_USER')")
+public class ItemController {
+
+    private final ItemWriteService itemWriteService;
+
+    private final ItemReadService itemReadService;
+
+    private final ItemService itemService;
+
+    @PostMapping("/create")
+    public Mono<ItemDTO> createItem(@RequestBody ItemCreationDTO creationDTO) {
+        return itemWriteService.createItem(creationDTO)
+                .mapNotNull(ItemUtils::from);
+    }
+
+    @PatchMapping("/change")
+    public Mono<ItemDTO> changeItem(@RequestBody ItemUpdatesDTO updates) {
+        return itemService.updateItem(updates)
+                .mapNotNull(ItemUtils::from);
+    }
+
+    @PostMapping("/toggle-active")
+    public Mono<ItemDTO> toggleActiveStatus(@RequestParam ObjectId itemId, @RequestParam boolean active) {
+        return itemWriteService.deactivateItem(itemId, active)
+                .map(ItemUtils::from);
+    }
+
+    @GetMapping("/fetch-paged")
+    public Flux<ItemDTO> fetchItemsPage(@RequestParam(value = "limit", defaultValue = "10") Integer limit,
+                                        @RequestParam(value = "offset", defaultValue = "0") Integer offset) {
+        return itemReadService.findForUser(offset, limit)
+                .mapNotNull(ItemUtils::from);
+    }
+
+    @GetMapping("/fetch-geo-paged")
+    public Flux<ItemDTO> fetchItemsPageWithGeolocation(
+            @RequestParam("latitude") Double latitude,
+            @RequestParam("longitude") Double longitude,
+            @RequestParam(value = "distance", defaultValue = "1000", required = false) Double distance,
+            @RequestParam(value = "limit", defaultValue = "10") Integer limit,
+            @RequestParam(value = "offset", defaultValue = "0") Integer offset) {
+        return itemReadService.findForUserDestination(offset, limit, latitude, longitude, distance)
+                .mapNotNull(ItemUtils::from);
+    }
+
+    @GetMapping("/count-for-location")
+    public Mono<Long> countForLocationBlockingUser(
+            @RequestParam("latitude") Double latitude,
+            @RequestParam("longitude") Double longitude,
+            @RequestParam(value = "distance", defaultValue = "1000", required = false) Double distance
+    ) {
+        return itemReadService.countForLocationRemovingBlockedBy(latitude, longitude, distance);
+    }
+}

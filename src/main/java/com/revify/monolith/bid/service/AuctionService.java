@@ -31,14 +31,16 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class AuctionService {
 
-    @Autowired
-    @Qualifier("bidServiceRedisTemplate")
-    private ReactiveRedisTemplate<String, Object> reactiveRedisTemplate;
+    private final ReactiveRedisTemplate<String, Object> reactiveRedisTemplate;
 
     private final ReactiveMongoTemplate mongoTemplate;
+
+    public AuctionService(@Qualifier("bidsMongoTemplate") ReactiveMongoTemplate mongoTemplate, @Qualifier("bidServiceRedisTemplate") ReactiveRedisTemplate<String, Object> reactiveRedisTemplate) {
+        this.mongoTemplate = mongoTemplate;
+        this.reactiveRedisTemplate = reactiveRedisTemplate;
+    }
 
     public Mono<Auction> createAuction(Mono<AuctionCreationRequest> bidItemModelCreationRequest) {
         return bidItemModelCreationRequest

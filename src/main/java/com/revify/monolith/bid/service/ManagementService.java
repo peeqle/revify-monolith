@@ -3,12 +3,14 @@ package com.revify.monolith.bid.service;
 import com.revify.monolith.bid.messaging.OrderProducer;
 import com.revify.monolith.bid.models.Auction;
 import com.revify.monolith.bid.models.Bid;
+import com.revify.monolith.commons.auth.sync.UserUtils;
 import com.revify.monolith.commons.models.bid.BidCreationRequest;
 import com.revify.monolith.currency_reader.service.CurrencyService;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -24,7 +26,6 @@ import java.time.Instant;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ManagementService {
 
     private final ReactiveMongoTemplate mongoTemplate;
@@ -34,6 +35,14 @@ public class ManagementService {
     private final AuctionService auctionService;
 
     private final OrderProducer orderProducer;
+
+    @Autowired
+    public ManagementService(@Qualifier("bidsMongoTemplate") ReactiveMongoTemplate mongoTemplate, CurrencyService currencyService, AuctionService auctionService, OrderProducer orderProducer) {
+        this.mongoTemplate = mongoTemplate;
+        this.currencyService = currencyService;
+        this.auctionService = auctionService;
+        this.orderProducer = orderProducer;
+    }
 
     public Mono<Bid> findById(ObjectId id) {
         return mongoTemplate.findById(id, Bid.class);
@@ -139,6 +148,7 @@ public class ManagementService {
                     .map(sad -> sad.getT2() && sad.getT1())
                     .map(x -> modelTuple.getT1())
                     .flatMap(validatedLastBid -> {
+                        validatedLastBid.setUserId(UserUtils.getUserId());
                         validatedLastBid.setCreatedAt(Instant.now().toEpochMilli());
                         validatedLastBid.setPublished(true);
                         return mongoTemplate.save(validatedLastBid);
@@ -161,7 +171,7 @@ public class ManagementService {
                 })
                 .map(bid -> lastBid)
                 .flatMap(bid -> {
-
+                    bid.setUserId(UserUtils.getUserId());
                     bid.setCreatedAt(Instant.now().toEpochMilli());
                     bid.setPublished(true);
                     return mongoTemplate.save(bid);

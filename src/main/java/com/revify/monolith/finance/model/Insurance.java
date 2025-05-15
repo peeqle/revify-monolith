@@ -1,5 +1,6 @@
 package com.revify.monolith.finance.model;
 
+import com.revify.monolith.commons.finance.InsuranceCertificate;
 import com.revify.monolith.commons.finance.Price;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -30,6 +31,11 @@ public class Insurance {
             @AttributeOverride(name = "amount", column = @Column(name = "item_price_amount"))
     })
     private Price itemPrice;
+
+    private Boolean isActive = true;
+    private Boolean isPayed = false;
+
+    private InsuranceCertificate certificate;
 
     public Insurance(UUID id) {
         this.id = id;

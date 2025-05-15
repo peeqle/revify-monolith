@@ -34,4 +34,9 @@ public interface AppUserReadRepository extends JpaRepository<AppUser, Long> {
             "join system.sys_app_user_blocked blck on blck.blocked_id = app_u.id " +
             "where app_u.keycloak_id = :keycloakUserId)", nativeQuery = true)
     List<String> findAllBlockedBy(String keycloakUserId);
+
+    @Query(value = "select user_.id from system.sys_app_user user_ where user_.id in " +
+            "(select distinct blck.app_user_id from system.sys_app_user app_u " +
+            "join system.sys_app_user_blocked blck on blck.blocked_id = app_u.id ", nativeQuery = true)
+    List<Long> findAllBlockedBy(Long userId);
 }
