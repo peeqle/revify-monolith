@@ -46,9 +46,11 @@ public class ItemUtils {
         item.setPrice(itemCreation.price());
 
         GeoLocation destination = new GeoLocation();
-        destination.setCountryCode(itemCreation.description().getDestination().getCountryCode());
-        destination.setPlaceName(itemCreation.description().getDestination().getPlaceName());
-        destination.setLocation(new GeoJsonPoint(itemCreation.latitude(), itemCreation.longitude()));
+        GeoLocation itemDestination = itemCreation.description().getDestination();
+        destination.setCountryCode(itemDestination.getCountryCode());
+        destination.setPlaceName(itemDestination.getPlaceName());
+        destination.setLocation(new GeoJsonPoint(itemDestination.getLocation().getX(),
+                itemDestination.getLocation().getY()));
 
         item.setActive(true);
         item.setItemDescription(

@@ -49,7 +49,6 @@ public class LoginController {
         return ResponseEntity.ok(keycloakAuthService.logout());
     }
 
-
     @PostMapping("/refresh")
     public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest request) {
         try {

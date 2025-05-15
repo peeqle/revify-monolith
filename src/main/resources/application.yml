@@ -69,3 +69,4 @@ server:
 logging:
   level:
     org.apache.kafka: WARN
+    org.springframework.web: DEBUG
