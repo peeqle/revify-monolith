@@ -33,6 +33,18 @@ public class RedisConfiguration {
     @Value("${spring.data.redis.port:6379}")
     private Integer port;
 
+    @Bean(name = "ttlRedisTemplate")
+    public ReactiveRedisTemplate<String, Object> ttlRedisTemplate(ReactiveRedisConnectionFactory factory) {
+        RedisSerializationContext<String, Object> serializationContext = RedisSerializationContext
+                .<String, Object>newSerializationContext(new StringRedisSerializer())
+                .hashKey(new StringRedisSerializer())
+                .hashValue(new GenericJackson2JsonRedisSerializer())
+                .value(new GenericJackson2JsonRedisSerializer())
+                .build();
+
+        return new ReactiveRedisTemplate<>(factory, serializationContext);
+    }
+
     @Bean(name = "bidServiceRedisTemplate")
     public ReactiveRedisTemplate<String, Object> bidServiceRedisTemplate(ReactiveRedisConnectionFactory factory) {
         RedisSerializationContext<String, Object> serializationContext = RedisSerializationContext

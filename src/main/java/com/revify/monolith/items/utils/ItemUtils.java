@@ -16,12 +16,17 @@ import java.util.Collections;
 public class ItemUtils {
 
     public static ItemDTO from(Item item) {
+        GeoLocation destination = item.getItemDescription().getDestination();
         return new ItemDTO(
                 item.getId().toHexString(),
                 item.getCreatorId(),
                 ItemDescriptionDTO.builder()
                         .description(item.getItemDescription().getDescription())
-                        .destination(item.getItemDescription().getDestination())
+                        .destination(ItemDescriptionDTO.Destination.builder()
+                                .address(destination.getDisplayName())
+                                .latitude(destination.getLocation().getY())
+                                .longitude(destination.getLocation().getX())
+                                .build())
                         .title(item.getItemDescription().getTitle())
                         .maximumRequiredBidPrice(item.getItemDescription().getMaximumRequiredBidPrice())
                         .build(),
@@ -46,11 +51,10 @@ public class ItemUtils {
         item.setPrice(itemCreation.price());
 
         GeoLocation destination = new GeoLocation();
-        GeoLocation itemDestination = itemCreation.description().getDestination();
-        destination.setCountryCode(itemDestination.getCountryCode());
-        destination.setPlaceName(itemDestination.getPlaceName());
-        destination.setLocation(new GeoJsonPoint(itemDestination.getLocation().getX(),
-                itemDestination.getLocation().getY()));
+        ItemDescriptionDTO.Destination itemDestination = itemCreation.description().getDestination();
+//        destination.setCountryCode(itemDestination.getCountryCode());
+//        destination.setPlaceName(itemDestination.getPlaceName());
+        destination.setLocation(new GeoJsonPoint(itemDestination.getLongitude(), itemDestination.getLatitude()));
 
         item.setActive(true);
         item.setItemDescription(

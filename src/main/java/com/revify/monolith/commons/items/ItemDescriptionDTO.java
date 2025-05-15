@@ -20,7 +20,17 @@ public class ItemDescriptionDTO {
     private String url;
 
     private Price maximumRequiredBidPrice;
-    private GeoLocation destination;
+    private Destination destination;
 
     private Boolean compositeStackingEnabled;
+
+    @Data
+    @Builder
+    @AllArgsConstructor
+    public static class Destination {
+        private String address;
+        private Double latitude;
+        private Double longitude;
+    }
+
 }

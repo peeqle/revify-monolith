@@ -1,5 +1,6 @@
 package com.revify.monolith.commons.finance;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -8,7 +9,7 @@ import java.math.BigDecimal;
 @Data
 @NoArgsConstructor
 public class Price implements Comparable<Price> {
-
+    @JsonDeserialize(using = Currency.CurrencyDeserializer.class)
     private Currency currency;
     private BigDecimal amount;
 

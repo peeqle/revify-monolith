@@ -50,7 +50,7 @@ spring:
     bootstrap-servers: ${KAFKA_URL:localhost:9092}
     consumer:
       group-id: revify-consumers
-      auto-offset-reset: latest
+      auto-offset-reset: earliest
       properties:
         spring.json.trusted.packages: "*"
     listener:

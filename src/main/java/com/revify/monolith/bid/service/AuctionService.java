@@ -33,13 +33,14 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class AuctionService {
 
-    private final ReactiveRedisTemplate<String, Object> reactiveRedisTemplate;
+    private final ReactiveRedisTemplate<String, Object> ttlRedisTemplate;
 
     private final ReactiveMongoTemplate mongoTemplate;
 
-    public AuctionService(@Qualifier("bidsMongoTemplate") ReactiveMongoTemplate mongoTemplate, @Qualifier("bidServiceRedisTemplate") ReactiveRedisTemplate<String, Object> reactiveRedisTemplate) {
+    public AuctionService(@Qualifier("bidsMongoTemplate") ReactiveMongoTemplate mongoTemplate,
+                          @Qualifier("ttlRedisTemplate") ReactiveRedisTemplate<String, Object> reactiveRedisTemplate) {
         this.mongoTemplate = mongoTemplate;
-        this.reactiveRedisTemplate = reactiveRedisTemplate;
+        this.ttlRedisTemplate = reactiveRedisTemplate;
     }
 
     public Mono<Auction> createAuction(Mono<AuctionCreationRequest> bidItemModelCreationRequest) {
@@ -170,7 +171,7 @@ public class AuctionService {
     private Auction buildAuction(AuctionCreationRequest request) {
         return Auction.builder()
                 .itemId(request.getItemId())
-                .bidsAcceptingTill(Instant.now().toEpochMilli() + request.getBidsAcceptingTill())
+                .bidsAcceptingTill(request.getBidsAcceptingTill())
                 .creatorId(request.getUserId())
                 .maximumRequiredBidPrice(request.getMaximumRequiredBidPrice())
                 .bidsLimit(request.getBidsLimit())
@@ -181,7 +182,7 @@ public class AuctionService {
 
     private void saveToRedis(Auction model) {
         long ttl = model.getBidsAcceptingTill() - Instant.now().toEpochMilli();
-        reactiveRedisTemplate.opsForValue()
+        ttlRedisTemplate.opsForValue()
                 .set(model.getId().toHexString(), model.getBidsAcceptingTill(), Duration.ofMillis(ttl))
                 .subscribe(success -> {
                     if (success) {

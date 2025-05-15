@@ -1,8 +1,16 @@
 package com.revify.monolith.commons.finance;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import io.micrometer.core.instrument.util.IOUtils;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import org.springframework.core.serializer.Deserializer;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -32,5 +40,13 @@ public enum Currency {
 
     public static Currency from(String name) {
         return Arrays.stream(Currency.values()).filter(e -> e.getName().equals(name)).findFirst().orElse(null);
+    }
+
+    public static class CurrencyDeserializer extends JsonDeserializer<Currency> {
+        @Override
+        public Currency deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+            String code = p.getText();
+            return Currency.from(code);
+        }
     }
 }

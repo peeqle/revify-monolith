@@ -7,6 +7,8 @@ import com.revify.monolith.items.service.item.ItemReadService;
 import com.revify.monolith.items.service.item.ItemService;
 import com.revify.monolith.items.service.item.ItemWriteService;
 import com.revify.monolith.items.utils.ItemUtils;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.core.MediaType;
 import lombok.RequiredArgsConstructor;
 import org.bson.types.ObjectId;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,6 +20,8 @@ import reactor.core.publisher.Mono;
 @RequestMapping("/item")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ROLE_USER')")
+
+@Consumes(MediaType.APPLICATION_JSON)
 public class ItemController {
 
     private final ItemWriteService itemWriteService;
