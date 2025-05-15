@@ -1,6 +1,8 @@
 package com.revify.monolith.keycloak;
 
 import com.revify.monolith.config.properties.KeycloakConfigProperties;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.keycloak.OAuth2Constants;
@@ -42,5 +44,15 @@ public class KeycloakProvider {
                 .clientSecret(String.valueOf(keycloakConfigProperties.getCredentials().getSecret()))
                 .grantType(OAuth2Constants.PASSWORD)
                 .build();
+    }
+
+    public Tuple2<String, String> realmTokens() {
+        return Tuple.of(keycloakConfigProperties.getResource(),
+                keycloakConfigProperties.getCredentials().getSecret());
+    }
+
+    public String buildRefreshRequestURL() {
+        return keycloakConfigProperties.getAuthServerUrl() + "/realms/"
+                + keycloakConfigProperties.getRealm() + "/protocol/openid-connect/token";
     }
 }
