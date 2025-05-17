@@ -7,6 +7,11 @@ import reactor.core.publisher.Mono;
 
 public class BidUtils {
 
+    public static BidDTO from(Bid e) {
+        return new BidDTO(e.getId().toHexString(), e.getAuctionId().toHexString(),
+                e.getCreatedAt(), e.getBidPrice());
+    }
+
     public static Mono<BidDTO> from(Mono<Bid> emitter) {
         return emitter.map(e -> new BidDTO(e.getId().toHexString(), e.getAuctionId().toHexString(),
                 e.getCreatedAt(), e.getBidPrice()));

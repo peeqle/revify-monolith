@@ -10,7 +10,6 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -37,7 +36,7 @@ public class ManagementService {
     private final OrderProducer orderProducer;
 
     @Autowired
-    public ManagementService(@Qualifier("bidsMongoTemplate") ReactiveMongoTemplate mongoTemplate, CurrencyService currencyService, AuctionService auctionService, OrderProducer orderProducer) {
+    public ManagementService(ReactiveMongoTemplate mongoTemplate, CurrencyService currencyService, AuctionService auctionService, OrderProducer orderProducer) {
         this.mongoTemplate = mongoTemplate;
         this.currencyService = currencyService;
         this.auctionService = auctionService;
@@ -105,16 +104,23 @@ public class ManagementService {
                 );
     }
 
-    public Mono<Bid> createBid(@NonNull Mono<BidCreationRequest> bidCreationRequest) {
-        return auctionService.searchForBidModel(bidCreationRequest)
-                .switchIfEmpty(Mono.error(new RuntimeException("Cannot create bid for non existing item")))
-                .flatMap(modelTuple ->
-                        findLastBidForItemModel(modelTuple.getT2().getId())
-                                .switchIfEmpty(createFirstBid(modelTuple.getT2(), modelTuple.getT1()))
-                                .flatMap(lastBid -> countLastBids(modelTuple.getT2())
-                                        .flatMap(count -> tryCreateBid(modelTuple, lastBid, count)))
-                )
-                .onErrorMap(RuntimeException.class, ex -> new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex));
+    public Mono<Bid> createBid(@NonNull BidCreationRequest bidCreationRequest) {
+        return auctionService.isItemCreatedByUser(new ObjectId(bidCreationRequest.getItemId()))
+                .flatMap(isUserCreated -> {
+                    if (isUserCreated) {
+                        return Mono.error(new SelfAuctionBidException(bidCreationRequest.getItemId()));
+                    }
+
+                    return auctionService.searchForBidModel(bidCreationRequest)
+                            .switchIfEmpty(Mono.error(new RuntimeException("Cannot create bid for non existing item")))
+                            .flatMap(modelTuple ->
+                                    findLastBidForItemModel(modelTuple.getT2().getId())
+                                            .switchIfEmpty(createFirstBid(modelTuple.getT2(), modelTuple.getT1()))
+                                            .flatMap(lastBid -> countLastBids(modelTuple.getT2())
+                                                    .flatMap(count -> tryCreateBid(modelTuple, lastBid, count)))
+                            )
+                            .onErrorMap(RuntimeException.class, ex -> new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex));
+                });
     }
 
     private Mono<Bid> tryCreateBid(Tuple2<Bid, Auction> modelTuple, Bid lastBid, Long count) {

@@ -35,7 +35,7 @@ public class CompositeItemService {
 
     @Autowired
     public CompositeItemService(TopicNotificationProducer topicNotificationProducer,
-                                @Qualifier("itemsMongoTemplate") ReactiveMongoTemplate mongoTemplate, ItemReadService itemReadService) {
+                                ReactiveMongoTemplate mongoTemplate, ItemReadService itemReadService) {
         this.topicNotificationProducer = topicNotificationProducer;
         this.mongoTemplate = mongoTemplate;
         this.itemReadService = itemReadService;

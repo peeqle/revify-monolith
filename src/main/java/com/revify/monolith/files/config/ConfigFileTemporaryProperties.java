@@ -1,4 +1,4 @@
-package com.revify.monolith.resource.config;
+package com.revify.monolith.files.config;
 
 import com.revify.monolith.config.YamlPropertySourceFactory;
 import lombok.Data;

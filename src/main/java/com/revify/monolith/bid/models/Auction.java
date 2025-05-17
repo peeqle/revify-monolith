@@ -30,7 +30,7 @@ public class Auction implements Serializable {
     private Long creatorId;
 
     //bids starting point
-    private Price maximumRequiredBidPrice = new Price(Currency.EURO, new BigDecimal(Double.MAX_VALUE));
+    private Price maximumRequiredBidPrice = new Price(Currency.EUR, new BigDecimal(Double.MAX_VALUE));
 
     private Long bidsLimit;
     private Long bidsAcceptingTill;

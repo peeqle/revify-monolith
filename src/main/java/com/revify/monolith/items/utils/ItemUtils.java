@@ -12,7 +12,6 @@ import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 import java.time.Instant;
 import java.util.Collections;
 
-//USER ID SET EXPLICITLY
 public class ItemUtils {
 
     public static ItemDTO from(Item item) {
@@ -54,6 +53,7 @@ public class ItemUtils {
         ItemDescriptionDTO.Destination itemDestination = itemCreation.description().getDestination();
 //        destination.setCountryCode(itemDestination.getCountryCode());
 //        destination.setPlaceName(itemDestination.getPlaceName());
+
         destination.setLocation(new GeoJsonPoint(itemDestination.getLongitude(), itemDestination.getLatitude()));
 
         item.setActive(true);

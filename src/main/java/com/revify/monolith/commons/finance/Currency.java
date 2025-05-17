@@ -18,18 +18,18 @@ import java.util.stream.Collectors;
 @Getter
 @AllArgsConstructor
 public enum Currency {
-    UNITED_STATES_DOLLAR("USD", "$"),
-    EURO("EUR", "€"),
-    BRITISH_POUND("GBP", "£"),
-    JAPANESE_YEN("JPY", "¥"),
-    CHINESE_YUAN("CNY", "¥"),
-    AUSTRALIAN_DOLLAR("AUD", "$"),
-    CANADIAN_DOLLAR("CAD", "$"),
-    SWISS_FRANC("CHF", "CHF"),
-    TURKISH_LIRA("TRY", "₺"),
-    RUSSIAN_RUBLE("RUB", "₽"),
-    BELARUSIAN_RUBLE("BYN", "Br"),
-    POLISH_ZLOTY("PLN", "zł");
+    USD("USD", "$"),
+    EUR("EUR", "€"),
+    GBP("GBP", "£"),
+    JPY("JPY", "¥"),
+    CNY("CNY", "¥"),
+    AUD("AUD", "$"),
+    CAD("CAD", "$"),
+    CHF("CHF", "CHF"),
+    TRY("TRY", "₺"),
+    RUB("RUB", "₽"),
+    BYN("BYN", "Br"),
+    PLN("PLN", "zł");
 
     private final String name;
     private final String symbol;
@@ -40,13 +40,5 @@ public enum Currency {
 
     public static Currency from(String name) {
         return Arrays.stream(Currency.values()).filter(e -> e.getName().equals(name)).findFirst().orElse(null);
-    }
-
-    public static class CurrencyDeserializer extends JsonDeserializer<Currency> {
-        @Override
-        public Currency deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-            String code = p.getText();
-            return Currency.from(code);
-        }
     }
 }

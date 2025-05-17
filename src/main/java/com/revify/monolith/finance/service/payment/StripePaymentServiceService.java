@@ -25,7 +25,7 @@ public class StripePaymentServiceService implements PaymentService<Payment> {
         for (Payment request : payments) {
             TransferCreateParams params = TransferCreateParams.builder()
                     .setAmount(PriceUtils.convertToCents(request.getPrice()))
-                    .setCurrency(Currency.EURO.getName())
+                    .setCurrency(Currency.EUR.getName())
                     .setDestination(request.getAccount().getPaymentToken().stream()
                             .filter(e -> e.getPaymentProcessor().equals(PaymentProcessor.STRIPE))
                             .findFirst().orElseThrow().getCardToken())

@@ -9,10 +9,8 @@ import com.revify.monolith.commons.models.bid.AuctionChangesRequest;
 import com.revify.monolith.commons.models.bid.AuctionCreationRequest;
 import com.revify.monolith.commons.models.bid.AuctionToggleRequest;
 import com.revify.monolith.commons.models.bid.BidCreationRequest;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -37,7 +35,7 @@ public class AuctionService {
 
     private final ReactiveMongoTemplate mongoTemplate;
 
-    public AuctionService(@Qualifier("bidsMongoTemplate") ReactiveMongoTemplate mongoTemplate,
+    public AuctionService(ReactiveMongoTemplate mongoTemplate,
                           @Qualifier("ttlRedisTemplate") ReactiveRedisTemplate<String, Object> reactiveRedisTemplate) {
         this.mongoTemplate = mongoTemplate;
         this.ttlRedisTemplate = reactiveRedisTemplate;
@@ -123,18 +121,16 @@ public class AuctionService {
                         ex -> new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex));
     }
 
-    public Mono<Tuple2<Bid, Auction>> searchForBidModel(Mono<BidCreationRequest> bidCreationRequestMono) {
+    public Mono<Tuple2<Bid, Auction>> searchForBidModel(BidCreationRequest creation) {
         long userId = UserUtils.getUserId();
-        return bidCreationRequestMono.flatMap(e ->
-                findAuctionForItemIdAndUserId(e.getItemId(), userId)
-                        .onErrorMap(IllegalArgumentException.class, ex -> new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex))
-                        .map(bidModel -> Tuples.of(Bid.builder()
-                                .auctionId(bidModel.getId())
-                                .userId(userId)
-                                .bidPrice(e.getBidPrice())
-                                .build(), bidModel)
-                        )
-        );
+        return findAuctionForItemIdAndUserId(creation.getItemId(), userId)
+                .onErrorMap(IllegalArgumentException.class, ex -> new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex))
+                .map(bidModel -> Tuples.of(Bid.builder()
+                        .auctionId(bidModel.getId())
+                        .userId(userId)
+                        .bidPrice(creation.getBidPrice())
+                        .build(), bidModel)
+                );
     }
 
     public Mono<Auction> findAuctionForItemId(String itemId) {
@@ -154,6 +150,13 @@ public class AuctionService {
     public Mono<Auction> findAuction(ObjectId auctionId) {
         Query query = Query.query(Criteria.where("id").is(auctionId));
         return mongoTemplate.findOne(query, Auction.class);
+    }
+
+    public Mono<Boolean> isItemCreatedByUser(ObjectId itemId) {
+        Query query = Query.query(Criteria.where("itemId").is(itemId));
+
+        return mongoTemplate.findOne(query, Auction.class)
+                .map(item -> item.getCreatorId().equals(UserUtils.getUserId()));
     }
 
     public Mono<Auction> findAuctionForItemIdAndUserId(String itemId, Long userId) {

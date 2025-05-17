@@ -30,14 +30,6 @@ public class AuctionController {
 
     private final AuctionService auctionService;
 
-    @PostMapping("/place")
-    public Mono<BidDTO> placeBid(@Validated @RequestBody Mono<BidCreationRequest> bidCreationRequest) {
-        log.debug("Placing bid for item");
-        return managementService
-                .createBid(bidCreationRequest)
-                .transform(BidUtils::from);
-    }
-
     @PostMapping("/finish-auction")
     public Mono<Void> finishAuction(@RequestParam ObjectId auctionId, @RequestParam ObjectId selectedBid) {
         log.debug("Finishing auction");

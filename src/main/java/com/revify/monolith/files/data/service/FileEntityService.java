@@ -1,12 +1,11 @@
-package com.revify.monolith.resource.data.service;
+package com.revify.monolith.files.data.service;
 
 import com.revify.monolith.commons.auth.sync.UserUtils;
-import com.revify.monolith.resource.data.models.EntityFile;
+import com.revify.monolith.files.data.models.EntityFile;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;

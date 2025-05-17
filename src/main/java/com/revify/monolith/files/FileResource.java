@@ -1,33 +1,39 @@
-package com.revify.monolith.resource;
+package com.revify.monolith.files;
 
+import com.mongodb.client.MongoCursor;
 import com.mongodb.client.gridfs.GridFSFindIterable;
 import com.mongodb.client.gridfs.model.GridFSFile;
 import com.revify.monolith.commons.exceptions.UnauthorizedAccessError;
 import com.revify.monolith.commons.files.FileBase64BatchRequestDTO;
 import com.revify.monolith.commons.files.FileBase64DTO;
 import com.revify.monolith.commons.models.ResourceEntityType;
-import com.revify.monolith.resource.data.models.EntityFile;
-import com.revify.monolith.resource.data.models.FileOptions;
-import com.revify.monolith.resource.data.service.FileEntityService;
-import com.revify.monolith.resource.data.service.FileService;
+import com.revify.monolith.files.data.models.EntityFile;
+import com.revify.monolith.files.data.models.FileOptions;
+import com.revify.monolith.files.data.service.FileEntityService;
+import com.revify.monolith.files.data.service.FileService;
 import io.vavr.Tuple2;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.exception.TikaException;
 import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.gridfs.GridFsResource;
-import org.springframework.http.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
 
 @Slf4j
 @RestController
+@RequestMapping("/files")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ROLE_USER')")
 public class FileResource {
@@ -38,9 +44,9 @@ public class FileResource {
 
 
     @PostMapping(value = "/upload", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
-    public ResponseEntity<String> upload(@RequestPart("entityType") String entityType,
-                                         @RequestPart("entityId") String entityId,
-                                         @RequestPart(value = "fileOrder", required = false) Long fileOrder,
+    public ResponseEntity<String> upload(@RequestParam("entityType") String entityType,
+                                         @RequestParam("entityId") String entityId,
+                                         @RequestParam(value = "fileOrder", required = false) Long fileOrder,
                                          @RequestPart("file") MultipartFile multipartFile) {
         try {
             String savedFileId = fileService.store(FileOptions.builder()
@@ -49,8 +55,10 @@ public class FileResource {
                     .order(fileOrder != null ? fileOrder : -1)
                     .build(), multipartFile).toString();
 
-            fileEntityService.saveUserFileRelation(savedFileId);
-            return ResponseEntity.ok(savedFileId);
+            if (ResourceEntityType.USER.name().equals(entityType)) {
+                fileEntityService.saveUserFileRelation(savedFileId);
+            }
+            return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (IOException | TikaException e) {
             log.warn("Cannot save file.", e);
             return ResponseEntity.badRequest().body("FAILED");
@@ -84,25 +92,30 @@ public class FileResource {
         if (!ObjectId.isValid(objectId)) {
             return ResponseEntity.badRequest().body("objectId is incorrect");
         }
-        try {
-            GridFSFile gridFSFile = fileService.getById(new ObjectId(objectId));
-            if (gridFSFile != null) {
+        GridFSFindIterable files = fileService.getById(new ObjectId(objectId));
+        if (files != null) {
+            List<GridFsResource> resources = new ArrayList<>(1);
+            long contentLength = 0L;
 
-                GridFsResource resource = fileService.getResource(gridFSFile);
-
-                HttpHeaders headers = new HttpHeaders();
-                headers.setContentType(MediaType.IMAGE_JPEG);
-                headers.setContentLength(resource.contentLength());
-                headers.setContentDisposition(ContentDisposition.builder("inline")
-                        .filename(resource.getFilename())
-                        .build());
-
-                return ResponseEntity.ok()
-                        .headers(headers)
-                        .body(resource);
+            try (MongoCursor<GridFSFile> cursor = files.iterator()) {
+                while (cursor.hasNext()) {
+                    GridFSFile file = cursor.next();
+                    resources.add(fileService.getResource(file));
+                    contentLength += file.getLength();
+                }
             }
-        } catch (IOException e) {
-            log.warn("Cannot read file bytes", e);
+
+            if (resources.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.IMAGE_JPEG);
+            headers.setContentLength(contentLength);
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(resources);
         }
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
@@ -111,29 +124,32 @@ public class FileResource {
     public ResponseEntity<FileBase64BatchRequestDTO> fetchForEntity(@RequestParam("entityType") String entityType,
                                                                     @RequestParam("entityId") String entityId) {
 
-        GridFSFindIterable gridFSFiles = fileService.getForEntity(entityId, ResourceEntityType.valueOf(entityType));
-        if (gridFSFiles != null) {
+        GridFSFindIterable files = fileService.getForEntity(entityId, ResourceEntityType.valueOf(entityType));
+        if (files != null) {
             FileBase64BatchRequestDTO fileBase64BatchRequestDTO = FileBase64BatchRequestDTO.builder()
                     .entityId(entityId)
                     .entityType(entityType)
                     .files(new LinkedList<>())
                     .build();
 
-            for (GridFSFile gridFSFile : gridFSFiles) {
-                FileBase64DTO fileBase64DTO = FileBase64DTO.builder()
-                        .fileName(gridFSFile.getFilename())
-                        .build();
-                try {
-                    fileBase64DTO.setFileEncoded(Base64.getEncoder()
-                            .encodeToString(fileService.getResource(gridFSFile).getInputStream().readAllBytes()));
-                    fileBase64DTO.setSuccess(true);
-                    fileBase64DTO.setId(gridFSFile.getId().asObjectId().getValue().toHexString());
+            try (MongoCursor<GridFSFile> cursor = files.iterator()) {
+                while (cursor.hasNext()) {
+                    GridFSFile file = cursor.next();
+                    FileBase64DTO fileBase64DTO = FileBase64DTO.builder()
+                            .fileName(file.getFilename())
+                            .build();
+                    try {
+                        fileBase64DTO.setFileEncoded(Base64.getEncoder()
+                                .encodeToString(fileService.getResource(file).getInputStream().readAllBytes()));
+                        fileBase64DTO.setSuccess(true);
+                        fileBase64DTO.setId(file.getId().asObjectId().getValue().toHexString());
 
-                    fileBase64BatchRequestDTO.getFiles().add(fileBase64DTO);
-                } catch (IOException e) {
-                    log.warn("Cannot read file resource from stream from gridFsFile: {}", gridFSFile.getId(), e);
-                } catch (NullPointerException npe) {
-                    log.warn("File contents corrupted: {} ", gridFSFile.getId(), npe);
+                        fileBase64BatchRequestDTO.getFiles().add(fileBase64DTO);
+                    } catch (IOException e) {
+                        log.warn("Cannot read file resource from stream from gridFsFile: {}", file.getId(), e);
+                    } catch (NullPointerException npe) {
+                        log.warn("File contents corrupted: {} ", file.getId(), npe);
+                    }
                 }
             }
 

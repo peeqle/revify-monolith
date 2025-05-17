@@ -1,4 +1,4 @@
-package com.revify.monolith.resource.data.models;
+package com.revify.monolith.files.data.models;
 
 import com.revify.monolith.commons.models.ResourceEntityType;
 import lombok.AllArgsConstructor;

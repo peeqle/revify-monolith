@@ -17,7 +17,7 @@ public class CompositeItemUniteRequestService {
 
     private final ReactiveMongoTemplate mongoTemplate;
 
-    public CompositeItemUniteRequestService(@Qualifier("itemsMongoTemplate") ReactiveMongoTemplate mongoTemplate) {
+    public CompositeItemUniteRequestService(ReactiveMongoTemplate mongoTemplate) {
         this.mongoTemplate = mongoTemplate;
     }
 

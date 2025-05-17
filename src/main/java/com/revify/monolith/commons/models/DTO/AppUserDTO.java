@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class AppUserDTO {
     private Long id;
+    private String displayName;
     private String username;
     private String email;
     private String phoneNumber;
@@ -24,6 +25,7 @@ public class AppUserDTO {
         appUserDTO.username = appUser.getUsername();
         appUserDTO.email = appUser.getEmail();
         appUserDTO.phoneNumber = appUser.getPhoneNumber();
+        appUserDTO.displayName = appUser.getCommonUserName();
         return appUserDTO;
     }
 

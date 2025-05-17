@@ -1,8 +1,8 @@
-package com.revify.monolith.resource.utils;
+package com.revify.monolith.files.utils;
 
 
 import com.google.common.net.MediaType;
-import com.revify.monolith.resource.config.ConfigFileTemporaryProperties;
+import com.revify.monolith.files.config.ConfigFileTemporaryProperties;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +35,7 @@ public class FileUtils {
     public void postConstruct() {
         File file = new File(configFileTemporaryProperties.getDirectory());
         if (!file.exists()) {
-            file.mkdir();
+            file.mkdirs();
         }
         tempFileDir = file;
     }

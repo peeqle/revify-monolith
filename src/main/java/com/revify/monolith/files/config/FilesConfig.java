@@ -1,4 +1,4 @@
-package com.revify.monolith.resource.config;
+package com.revify.monolith.files.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;

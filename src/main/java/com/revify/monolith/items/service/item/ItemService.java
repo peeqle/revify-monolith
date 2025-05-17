@@ -11,9 +11,8 @@ import com.revify.monolith.items.model.item.Item;
 import com.revify.monolith.items.model.item.ItemPremium;
 import com.revify.monolith.items.model.util.ItemChangesComparator;
 import com.revify.monolith.notifications.connector.producers.FanoutNotificationProducer;
+import lombok.RequiredArgsConstructor;
 import org.bson.types.ObjectId;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.access.AccessDeniedException;
@@ -26,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import static com.revify.monolith.commons.messaging.KafkaTopic.AUCTION_CHANGES;
 
 @Service
+@RequiredArgsConstructor
 public class ItemService {
     private final ReactiveMongoTemplate mongoTemplate;
 
@@ -36,14 +36,6 @@ public class ItemService {
     private final KafkaTemplate<String, String> kafkaTemplate;
 
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-
-    @Autowired
-    public ItemService(@Qualifier("itemsMongoTemplate") ReactiveMongoTemplate mongoTemplate, FanoutNotificationProducer fanoutNotificationProducer, ItemReadService itemReadService, KafkaTemplate<String, String> kafkaTemplate) {
-        this.mongoTemplate = mongoTemplate;
-        this.fanoutNotificationProducer = fanoutNotificationProducer;
-        this.itemReadService = itemReadService;
-        this.kafkaTemplate = kafkaTemplate;
-    }
 
     //todo make payment request to user
     public void attachPremium(Duration duration, ObjectId itemId) {

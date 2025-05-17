@@ -1,4 +1,4 @@
-package com.revify.monolith.resource.data.models;
+package com.revify.monolith.files.data.models;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;

@@ -1,4 +1,4 @@
-package com.revify.monolith.resource.data.service;
+package com.revify.monolith.files.data.service;
 
 
 import com.mongodb.client.gridfs.GridFSBuckets;
@@ -6,16 +6,15 @@ import com.mongodb.client.gridfs.GridFSFindIterable;
 import com.mongodb.client.gridfs.model.GridFSFile;
 import com.mongodb.client.model.Filters;
 import com.revify.monolith.commons.models.ResourceEntityType;
-import com.revify.monolith.resource.data.models.CustomFile;
-import com.revify.monolith.resource.data.models.FileOptions;
-import com.revify.monolith.resource.utils.FileUtils;
+import com.revify.monolith.files.data.models.CustomFile;
+import com.revify.monolith.files.data.models.FileOptions;
+import com.revify.monolith.files.utils.FileUtils;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.tika.exception.TikaException;
 import org.bson.Document;
 import org.bson.types.ObjectId;
-import org.reactivestreams.Publisher;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.MongoDatabaseFactory;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -49,7 +48,7 @@ public class FileService {
                 String filename = multipartFile.getOriginalFilename();
                 File file = fileUtils.createTemporaryFile(is, filename);
 
-                CustomFile metadata = prepareFileMetadata(file, fileHash, filename);
+                CustomFile metadata = prepareNewFileMetadata(file, fileHash, filename);
                 metadata.setFileOptions(fileOptions);
 
                 ObjectId store = template.store(
@@ -59,8 +58,18 @@ public class FileService {
                 );
                 file.delete();
                 return store;
+            } else {
+                CustomFile metadata = prepareExistingFileMetadata(fileHash, hashFile.getFilename());
+
+                GridFsResource resource = getResource(hashFile);
+                metadata.setFileOptions(fileOptions);
+
+                return template.store(
+                        resource.getInputStream(),
+                        hashFile.getFilename(),
+                        metadata
+                );
             }
-            return hashFile.getObjectId();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -92,8 +101,8 @@ public class FileService {
         return template.findOne(Query.query(Criteria.where("metadata.fileHash").is(fileHash)));
     }
 
-    public GridFSFile getById(ObjectId fileId) {
-        return template.findOne(Query.query(Criteria.where("_id").is(fileId)));
+    public GridFSFindIterable getById(ObjectId fileId) {
+        return template.find(Query.query(Criteria.where("_id").is(fileId)));
     }
 
     public GridFSFindIterable getForEntity(String entityId, ResourceEntityType entityType) {
@@ -109,12 +118,22 @@ public class FileService {
         return template.getResource(fsFile);
     }
 
-    public CustomFile prepareFileMetadata(File tempFile, String fileHash, String filename) throws IOException {
+    public CustomFile prepareNewFileMetadata(File tempFile, String fileHash, String filename) throws IOException {
         CustomFile preparedCustomFile = new CustomFile();
         preparedCustomFile.setCreatedAt(System.currentTimeMillis());
         preparedCustomFile.setFileHash(fileHash);
         preparedCustomFile.setInitialFileExtension(FilenameUtils.getExtension(filename));
         preparedCustomFile.setSystemFileName(tempFile.getName());
+        preparedCustomFile.setInitialFileName(filename);
+        return preparedCustomFile;
+    }
+
+    public CustomFile prepareExistingFileMetadata(String fileHash, String filename) {
+        CustomFile preparedCustomFile = new CustomFile();
+        preparedCustomFile.setCreatedAt(System.currentTimeMillis());
+        preparedCustomFile.setFileHash(fileHash);
+        preparedCustomFile.setInitialFileExtension(FilenameUtils.getExtension(filename));
+        preparedCustomFile.setSystemFileName(filename);
         preparedCustomFile.setInitialFileName(filename);
         return preparedCustomFile;
     }

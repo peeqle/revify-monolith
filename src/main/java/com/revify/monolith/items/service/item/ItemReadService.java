@@ -19,8 +19,6 @@ import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collections;
-import java.util.List;
 
 @Service
 public class ItemReadService {
@@ -50,16 +48,22 @@ public class ItemReadService {
     }
 
 
-    public Flux<Item> findForUser(Integer offset, Integer limit) {
-        return removeBlockedByCreatorsCriteria()
-                .flux().flatMap(criteria -> {
-                    Query query = new Query()
-                            .addCriteria(criteria)
-                            .skip((long) offset * limit)
-                            .limit(limit);
+    public Flux<Item> findUserItems(Integer offset, Integer limit) {
+        Query query = new Query()
+                .addCriteria(Criteria.where("creatorId").is(UserUtils.getUserId()))
+                .skip((long) offset * limit)
+                .limit(limit);
 
-                    return mongoTemplate.find(query, Item.class);
-                });
+        return mongoTemplate.find(query, Item.class);
+    }
+
+    public Flux<Item> findForUser(Integer offset, Integer limit) {
+        Query query = new Query()
+                .addCriteria(Criteria.where("creatorId").ne(UserUtils.getUserId()))
+                .skip((long) offset * limit)
+                .limit(limit);
+
+        return mongoTemplate.find(query, Item.class);
     }
 
     public Flux<Item> findForUserDestination(Integer offset, Integer limit, Double latitude, Double longitude, Double distance) {
@@ -92,9 +96,7 @@ public class ItemReadService {
     }
 
     public Mono<Criteria> removeBlockedByCreatorsCriteria() {
-        List<Long> allBlockedBy = readUserService.findAllBlockedBy(UserUtils.getUserId());
-        return Mono.just(Criteria.where("creatorId").not()
-                .in(allBlockedBy.isEmpty() ? Collections.emptyList() : allBlockedBy));
+        return Mono.just(Criteria.where("creatorId").not().in(readUserService.findAllBlockedBy(UserUtils.getUserId())));
     }
 
     public Mono<Long> countAllByCreator(Long userId) {

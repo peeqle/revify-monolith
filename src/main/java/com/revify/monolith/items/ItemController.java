@@ -10,12 +10,15 @@ import com.revify.monolith.items.utils.ItemUtils;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.core.MediaType;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+@Slf4j
 @RestController
 @RequestMapping("/item")
 @RequiredArgsConstructor
@@ -42,6 +45,17 @@ public class ItemController {
                 .mapNotNull(ItemUtils::from);
     }
 
+    @GetMapping("/{itemId}")
+    public Mono<ResponseEntity<ItemDTO>> getItem(@PathVariable ObjectId itemId) {
+        return itemReadService.findById(itemId)
+                .map(item -> ResponseEntity.ok(ItemUtils.from(item)))
+                .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()))
+                .onErrorResume(e -> {
+                    log.error("Error fetching item with id: {}", itemId, e);
+                    return Mono.just(ResponseEntity.internalServerError().build());
+                });
+    }
+
     @PostMapping("/toggle-active")
     public Mono<ItemDTO> toggleActiveStatus(@RequestParam ObjectId itemId, @RequestParam boolean active) {
         return itemWriteService.deactivateItem(itemId, active)
@@ -49,6 +63,13 @@ public class ItemController {
     }
 
     @GetMapping("/fetch-paged")
+    public Flux<ItemDTO> fetchItemsPageForCurrentUser(@RequestParam(value = "limit", defaultValue = "10") Integer limit,
+                                        @RequestParam(value = "offset", defaultValue = "0") Integer offset) {
+        return itemReadService.findUserItems(offset, limit)
+                .mapNotNull(ItemUtils::from);
+    }
+
+    @GetMapping("/fetch-items-paged")
     public Flux<ItemDTO> fetchItemsPage(@RequestParam(value = "limit", defaultValue = "10") Integer limit,
                                         @RequestParam(value = "offset", defaultValue = "0") Integer offset) {
         return itemReadService.findForUser(offset, limit)
