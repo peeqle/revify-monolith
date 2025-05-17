@@ -134,12 +134,7 @@ public class AuctionService {
     }
 
     public Mono<Auction> findAuctionForItemId(String itemId) {
-        Query query = Query.query(
-                Criteria.where("itemId").is(itemId)
-                        .and("bidsAcceptingTill")
-                        .gte(Instant.now().plus(5, TimeUnit.SECONDS.toChronoUnit()).toEpochMilli())
-        );
-
+        Query query = Query.query(Criteria.where("itemId").is(itemId));
         return mongoTemplate.findOne(query, Auction.class);
     }
 
@@ -152,11 +147,13 @@ public class AuctionService {
         return mongoTemplate.findOne(query, Auction.class);
     }
 
-    public Mono<Boolean> isItemCreatedByUser(ObjectId itemId) {
-        Query query = Query.query(Criteria.where("itemId").is(itemId));
+    public Mono<Boolean> isItemCreatedByUser(String itemId) {
+        Long currentUserId = UserUtils.getUserId();
+        Query query = Query.query(Criteria.where("itemId").is(itemId)
+                .and("isActive").is(true));
 
         return mongoTemplate.findOne(query, Auction.class)
-                .map(item -> item.getCreatorId().equals(UserUtils.getUserId()));
+                .map(item -> item.getCreatorId().equals(currentUserId));
     }
 
     public Mono<Auction> findAuctionForItemIdAndUserId(String itemId, Long userId) {

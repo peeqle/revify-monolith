@@ -38,17 +38,17 @@ public class BidController {
                     return new BidResponse(dto);
                 })
                 .onErrorResume(SelfAuctionBidException.class, e ->
-                        Mono.just(new BidResponse(null, HttpStatus.BAD_REQUEST, e.getMessage())))
+                        Mono.just(new BidResponse(null, HttpStatus.BAD_REQUEST, "You cannot place a bid to your item!")))
                 .onErrorResume(ResponseStatusException.class, e ->
-                        Mono.just(new BidResponse(null, HttpStatus.BAD_REQUEST, e.getMessage())))
+                        Mono.just(new BidResponse(null, HttpStatus.BAD_REQUEST, "Error placing a bid!")))
                 .onErrorResume(e ->
                         Mono.just(new BidResponse(null, HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error")));
     }
 
     @GetMapping("/all-for-item")
-    public Flux<BidDTO> findAllBids(@RequestParam String itemId) {
+    public Flux<BidDTO> findAllBids(@RequestParam("itemId") String itemId) {
         return managementService
-                .findAllBids(Mono.just(itemId))
+                .findAllBids(itemId)
                 .transform(BidUtils::from);
     }
 
@@ -64,6 +64,4 @@ public class BidController {
             this(entity, null, "");
         }
     }
-
-    ;
 }

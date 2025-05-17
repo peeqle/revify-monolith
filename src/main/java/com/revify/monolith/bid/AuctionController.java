@@ -1,6 +1,7 @@
 package com.revify.monolith.bid;
 
 
+import com.revify.monolith.bid.models.Bid;
 import com.revify.monolith.bid.service.AuctionService;
 import com.revify.monolith.bid.service.ManagementService;
 import com.revify.monolith.bid.util.AuctionUtils;
@@ -30,8 +31,20 @@ public class AuctionController {
 
     private final AuctionService auctionService;
 
+    @GetMapping
+    public Mono<AuctionDTO> getAuction(@RequestParam("auctionId") ObjectId id) {
+        return auctionService.findAuction(id)
+                .map(AuctionDTO::from);
+    }
+
+    @GetMapping("/auction-for-item")
+    public Mono<AuctionDTO> getAuctionForItem(@RequestParam("itemId") String id) {
+        return auctionService.findAuctionForItemId(id)
+                .map(AuctionDTO::from);
+    }
+
     @PostMapping("/finish-auction")
-    public Mono<Void> finishAuction(@RequestParam ObjectId auctionId, @RequestParam ObjectId selectedBid) {
+    public Mono<Void> finishAuction(@RequestParam("auctionId") ObjectId auctionId, @RequestParam ("selectedBidId") ObjectId selectedBid) {
         log.debug("Finishing auction");
         return managementService.finishAuction(auctionId, selectedBid);
     }
@@ -48,19 +61,5 @@ public class AuctionController {
         log.debug("Archiving auction");
         return auctionService.archiveAuction(auctionId)
                 .transform(AuctionUtils::from);
-    }
-
-    @GetMapping("/all-for-item")
-    public Flux<BidDTO> findAllBids(@RequestParam String itemId) {
-        return managementService
-                .findAllBids(Mono.just(itemId))
-                .transform(BidUtils::from);
-    }
-
-    @GetMapping("/all-for-item-limited")
-    public Flux<BidDTO> findAllBids(@RequestParam String itemId, @RequestParam Integer limit) {
-        return managementService
-                .findLastBids(Mono.just(itemId).zipWith(Mono.just(limit), Tuples::of))
-                .transform(BidUtils::from);
     }
 }
