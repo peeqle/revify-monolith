@@ -12,5 +12,6 @@ import lombok.NoArgsConstructor;
 public class AuctionChangesRequest {
     private String itemId;
     private Long changeValidUntil;
+    private Boolean isActive = true;
     private Boolean isPremium = true;
 }

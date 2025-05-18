@@ -12,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
 
 @Slf4j
 @Component
@@ -27,12 +26,9 @@ public class AuctionConsumer {
     public void listenAuctionCreation(@Payload String message) {
         System.out.println("Received Message: " + message);
 
-        if (message != null) {
-            auctionService.createAuction(Mono.just(gson.fromJson(message, AuctionCreationRequest.class)))
-                    .subscribe(e -> log.info("Saved new Auction {}", e.getId()),
-                            ex -> log.error("Cannot save Auction", ex),
-                            () -> log.info("Completed Auction save")
-                    );
+        AuctionCreationRequest auctionCreationRequest = gson.fromJson(message, AuctionCreationRequest.class);
+        if (message != null && !message.isEmpty() && auctionCreationRequest != null) {
+            auctionService.createAuction(auctionCreationRequest);
         }
     }
 
@@ -40,12 +36,9 @@ public class AuctionConsumer {
     public void listenAuctionDeactivation(@Payload String message) {
         System.out.println("Received Message: " + message);
 
-        if (message != null) {
-            auctionService.deactivateAuction(gson.fromJson(message, AuctionToggleRequest.class))
-                    .subscribe(e -> log.info("Deactivated auction {}", e.getId()),
-                            ex -> log.error("Cannot deactivate auction.", ex),
-                            () -> log.info("Completed auction deactivation.")
-                    );
+        AuctionToggleRequest auctionToggleRequest = gson.fromJson(message, AuctionToggleRequest.class);
+        if (message != null && !message.isEmpty() && auctionToggleRequest != null) {
+            auctionService.toggleAuctionStatus(auctionToggleRequest);
         }
     }
 
@@ -55,12 +48,9 @@ public class AuctionConsumer {
     public void listenAuctionChanges(@Payload String message) {
         System.out.println("Received Message: " + message);
 
-        if (message != null) {
-            auctionService.changeAuction(gson.fromJson(message, AuctionChangesRequest.class))
-                    .subscribe(e -> log.info("Changed auction {}", e.getId()),
-                            ex -> log.error("Cannot change auction.", ex),
-                            () -> log.info("Completed auction deactivation.")
-                    );
+        AuctionChangesRequest auctionChangesRequest = gson.fromJson(message, AuctionChangesRequest.class);
+        if (message != null && !message.isEmpty() && auctionChangesRequest != null) {
+            auctionService.changeAuction(auctionChangesRequest);
         }
     }
 
@@ -68,12 +58,9 @@ public class AuctionConsumer {
     public void listenAuctionRecreation(@Payload String message) {
         System.out.println("Received Message: " + message);
 
+        AuctionCreationRequest auctionCreationRequest = gson.fromJson(message, AuctionCreationRequest.class);
         if (message != null) {
-            auctionService.deactivateAuction(gson.fromJson(message, AuctionToggleRequest.class))
-                    .subscribe(e -> log.info("Deactivated auction {}", e.getId()),
-                            ex -> log.error("Cannot deactivate auction.", ex),
-                            () -> log.info("Completed auction deactivation.")
-                    );
+            auctionService.recreateAuction(auctionCreationRequest);
         }
     }
 }

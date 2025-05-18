@@ -7,17 +7,16 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.PropertySource;
-import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
-import org.springframework.data.redis.core.ReactiveRedisOperations;
-import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
-import org.springframework.data.redis.listener.ReactiveRedisMessageListenerContainer;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
-import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
-import org.springframework.data.redis.serializer.RedisSerializationContext;
-import org.springframework.data.redis.serializer.StringRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializer;
+
+import java.util.Arrays;
 
 @Configuration
 @RequiredArgsConstructor
@@ -33,69 +32,37 @@ public class RedisConfiguration {
     @Value("${spring.data.redis.port:6379}")
     private Integer port;
 
-    @Bean(name = "ttlRedisTemplate")
-    public ReactiveRedisTemplate<String, Object> ttlRedisTemplate(ReactiveRedisConnectionFactory factory) {
-        RedisSerializationContext<String, Object> serializationContext = RedisSerializationContext
-                .<String, Object>newSerializationContext(new StringRedisSerializer())
-                .hashKey(new StringRedisSerializer())
-                .hashValue(new GenericJackson2JsonRedisSerializer())
-                .value(new GenericJackson2JsonRedisSerializer())
-                .build();
+    @Bean
+    public RedisTemplate<String, Object> redisTemplate() {
+        RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
+        redisTemplate.setConnectionFactory(redisConnectionFactory());
+        redisTemplate.setHashKeySerializer(RedisSerializer.string());
+        redisTemplate.setHashValueSerializer(RedisSerializer.string());
+        redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
 
-        return new ReactiveRedisTemplate<>(factory, serializationContext);
-    }
-
-    @Bean(name = "bidServiceRedisTemplate")
-    public ReactiveRedisTemplate<String, Object> bidServiceRedisTemplate(ReactiveRedisConnectionFactory factory) {
-        RedisSerializationContext<String, Object> serializationContext = RedisSerializationContext
-                .<String, Object>newSerializationContext(new StringRedisSerializer())
-                .hashKey(new StringRedisSerializer())
-                .hashValue(new GenericJackson2JsonRedisSerializer())
-                .value(new GenericJackson2JsonRedisSerializer())
-                .build();
-
-        return new ReactiveRedisTemplate<>(factory, serializationContext);
-    }
-
-    @Bean(name = "currencyReaderRedisTemplate")
-    public ReactiveRedisTemplate<String, Object> currencyReaderRedisTemplate() {
-        RedisSerializationContext<String, Object> serializationContext = RedisSerializationContext
-                .<String, Object>newSerializationContext(new StringRedisSerializer())
-                .build();
-        return new ReactiveRedisTemplate<>(reactiveRedisConnectionFactory(), serializationContext);
+        return redisTemplate;
     }
 
     @Bean
-    public ReactiveRedisMessageListenerContainer reactiveRedisMessageListenerContainer(ReactiveRedisConnectionFactory factory) {
-        ReactiveRedisMessageListenerContainer container = new ReactiveRedisMessageListenerContainer(factory);
-        container.receive(ChannelTopic.of("auctionExpiration"))
-                .map(e -> redisMessageListener().onMessage(e.getMessage())).subscribe();
+    public RedisMessageListenerContainer redisMessageListenerContainer() {
+        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+        container.setConnectionFactory(redisConnectionFactory());
+        container.addMessageListener((message, pattern) -> redisMessageListener().onMessage(message),
+                ChannelTopic.of("auctionExpiration"));
         return container;
     }
 
     @Bean
     public RedisEventListener redisMessageListener() {
         return (message) -> {
-            System.out.println("Expired key: " + message);
-            return message;
+            System.out.println("Expired key: " + Arrays.toString(message.getChannel()));
+            return new String(message.getBody());
         };
     }
 
     @Bean
-    public ReactiveRedisOperations<String, Object> redisOperations(ReactiveRedisConnectionFactory factory) {
-        Jackson2JsonRedisSerializer<Object> serializer = new Jackson2JsonRedisSerializer<>(Object.class);
-
-        RedisSerializationContext.RedisSerializationContextBuilder<String, Object> builder =
-                RedisSerializationContext.newSerializationContext(new StringRedisSerializer());
-
-        RedisSerializationContext<String, Object> context = builder.value(serializer).build();
-
-        return new ReactiveRedisTemplate<>(factory, context);
-    }
-
-    @Bean
     @Primary
-    public ReactiveRedisConnectionFactory reactiveRedisConnectionFactory() {
+    public RedisConnectionFactory redisConnectionFactory() {
         return new LettuceConnectionFactory(host, port);
     }
 }

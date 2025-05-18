@@ -1,7 +1,12 @@
 package com.revify.monolith.commons.bids;
 
 
+import com.revify.monolith.bid.models.Bid;
 import com.revify.monolith.commons.finance.Price;
 
-public record BidDTO(String bidId, String auctionId, Long createdAt, Price price) {
+public record BidDTO(String id, String auctionId, Long createdAt, Price price) {
+
+    public static BidDTO from(Bid bid) {
+        return new BidDTO(bid.getId().toHexString(), bid.getAuctionId().toHexString(), bid.getCreatedAt(), bid.getBidPrice());
+    }
 }

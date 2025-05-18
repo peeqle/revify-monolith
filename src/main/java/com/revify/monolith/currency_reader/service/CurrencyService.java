@@ -5,11 +5,8 @@ import com.google.gson.GsonBuilder;
 import com.revify.monolith.commons.finance.Price;
 import com.revify.monolith.currency_reader.data.CurrencySnapshot;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 
@@ -21,34 +18,33 @@ public class CurrencyService {
 
     private static final String BASE_FIAT = "EUR";
 
-    @Autowired
-    @Qualifier("bidServiceRedisTemplate")
-    private ReactiveRedisTemplate<String, Object> reactiveRedisTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     private final ThreadLocal<Gson> gsonThreadLocal = ThreadLocal.withInitial(() -> new GsonBuilder().create());
 
-    public Mono<CurrencySnapshot> findCurrency(Mono<String> literal) {
-        return literal
-                .flatMap(e -> reactiveRedisTemplate.opsForHash().get(OPS_KEY, e))
-                .mapNotNull(v -> gsonThreadLocal.get().fromJson((String) v, CurrencySnapshot.class));
+    public CurrencySnapshot findCurrency(String literal) {
+        Object o = redisTemplate.opsForHash().get(OPS_KEY, literal);
+        return gsonThreadLocal.get().fromJson((String) o, CurrencySnapshot.class);
     }
 
-    public Mono<BigDecimal> convertTo(String from, String to, Double amount) {
-        return findCurrency(Mono.just(to))
-                .zipWith(findCurrency(Mono.just(from)),
-                        (first, second) ->
-                                new BigDecimal(amount * (first.getAmount() / second.getAmount())));
+    public BigDecimal convertTo(String from, String to, Double amount) {
+        CurrencySnapshot currencyTo = findCurrency(to);
+        CurrencySnapshot currencyFrom = findCurrency(from);
+        if (currencyTo == null || currencyFrom == null) {
+            throw new RuntimeException("Could not find currency");
+        }
+        return new BigDecimal(amount * (currencyTo.getAmount() / currencyFrom.getAmount()));
     }
 
-    public Mono<Boolean> compare(Operand operand, Price first, Price second) {
+    public Boolean compare(Operand operand, Price first, Price second) {
         if (first.getCurrency().equals(second.getCurrency())) {
-            return Mono.just(operand.compare(first.getAmount(), second.getAmount()));
+            return operand.compare(first.getAmount(), second.getAmount());
         }
 
-        return convertTo(first.getCurrency().getName(), BASE_FIAT, first.getAmount().doubleValue())
-                .flatMap(firstFiat ->
-                        convertTo(second.getCurrency().getName(), BASE_FIAT, second.getAmount().doubleValue())
-                                .map(secondFiat -> operand.compare(first.getAmount(), second.getAmount())));
+        BigDecimal convertedFirst = convertTo(first.getCurrency().getName(), BASE_FIAT, first.getAmount().doubleValue());
+        BigDecimal bigDecimal = convertTo(second.getCurrency().getName(), BASE_FIAT, second.getAmount().doubleValue());
+
+        return operand.compare(convertedFirst, bigDecimal);
     }
 
     public enum Operand {
@@ -63,6 +59,5 @@ public class CurrencyService {
                 case EQ -> first.compareTo(second) == 0;
             };
         }
-
     }
 }

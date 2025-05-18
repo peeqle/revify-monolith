@@ -1,171 +1,204 @@
 package com.revify.monolith.bid.service;
 
-
 import com.revify.monolith.bid.models.Auction;
 import com.revify.monolith.bid.models.Bid;
-import com.revify.monolith.bid.models.exceptions.ItemDoesPersistException;
 import com.revify.monolith.commons.auth.sync.UserUtils;
 import com.revify.monolith.commons.models.bid.AuctionChangesRequest;
 import com.revify.monolith.commons.models.bid.AuctionCreationRequest;
 import com.revify.monolith.commons.models.bid.AuctionToggleRequest;
 import com.revify.monolith.commons.models.bid.BidCreationRequest;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-import reactor.core.publisher.Mono;
 import reactor.util.function.Tuple2;
-import reactor.util.function.Tuples;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class AuctionService {
 
-    private final ReactiveRedisTemplate<String, Object> ttlRedisTemplate;
+    private final MongoTemplate mongoTemplate;
 
-    private final ReactiveMongoTemplate mongoTemplate;
+    private final RedisTemplate<String, Object> ttlRedisTemplate;
 
-    public AuctionService(ReactiveMongoTemplate mongoTemplate,
-                          @Qualifier("ttlRedisTemplate") ReactiveRedisTemplate<String, Object> reactiveRedisTemplate) {
-        this.mongoTemplate = mongoTemplate;
-        this.ttlRedisTemplate = reactiveRedisTemplate;
+    public Auction createAuction(AuctionCreationRequest creationRequest) {
+        if (checkActiveAuctionExists(creationRequest.getItemId())) {
+            throw new RuntimeException("Active auction already exists for item: " + creationRequest.getItemId());
+        }
+
+        Auction newAuction = buildAuction(creationRequest);
+        Auction savedAuction = mongoTemplate.save(newAuction);
+        saveToRedis(savedAuction);
+        return savedAuction;
     }
 
-    public Mono<Auction> createAuction(Mono<AuctionCreationRequest> bidItemModelCreationRequest) {
-        return bidItemModelCreationRequest
-                .flatMap(this::validateItemNotExists)
-                .map(this::buildAuction)
-                .flatMap(mongoTemplate::save)
-                .doOnError(e -> System.err.println("Error during save: " + e.getMessage()))
-                .flatMap(e -> {
-                    saveToRedis(e);
-                    return Mono.just(e);
-                });
+    public Auction recreateAuction(AuctionCreationRequest creationRequest) {
+        Auction latestInactiveAuction = findAuctionByItemUserAndStatus(creationRequest.getItemId(), false);
+
+        if (latestInactiveAuction == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Latest inactive auction not found for item: " + creationRequest.getItemId());
+        }
+
+        latestInactiveAuction.setUpdatedAt(Instant.now().toEpochMilli());
+        latestInactiveAuction.setBidsLimit(creationRequest.getBidsLimit());
+        latestInactiveAuction.setDeliveryTimeEnd(creationRequest.getDeliveryTimeEnd());
+        latestInactiveAuction.setMaximumRequiredBidPrice(creationRequest.getMaximumRequiredBidPrice());
+        latestInactiveAuction.setBidsAcceptingTill(creationRequest.getBidsAcceptingTill());
+
+        Auction savedAuction = mongoTemplate.save(latestInactiveAuction);
+        saveToRedis(savedAuction);
+        return savedAuction;
     }
 
-    public Mono<Auction> recreateAuction(Mono<AuctionCreationRequest> bidItemModelCreationRequest) {
-        return bidItemModelCreationRequest
-                .flatMap(this::validateItemNotExists)
-                .map(this::buildAuction)
-                .flatMap(mongoTemplate::save)
-                .doOnError(e -> System.err.println("Error during save: " + e.getMessage()))
-                .flatMap(e -> {
-                    saveToRedis(e);
-                    return Mono.just(e);
-                });
+    public Auction toggleAuctionStatus(AuctionToggleRequest auctionToggleRequest) {
+        Auction auction = findActiveAuctionForUser(auctionToggleRequest.getItemId());
+
+        if (auction == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Active auction not found for item: " + auctionToggleRequest.getItemId());
+        }
+
+        auction.setUpdatedAt(Instant.now().toEpochMilli());
+        auction.setIsActive(auctionToggleRequest.getStatus());
+        auction.setManuallyToggled(auctionToggleRequest.getManuallyToggled());
+
+        return mongoTemplate.save(auction);
     }
 
-    public Mono<Auction> deactivateAuction(AuctionToggleRequest auctionToggleRequest) {
-        return mongoTemplate.findOne(Query.query(Criteria.where("itemId").is("itemId")), Auction.class)
-                .flatMap(auction -> {
-                    auction.setIsActive(auctionToggleRequest.getStatus());
-                    auction.setManuallyToggled(auctionToggleRequest.getManuallyToggled());
+    public Auction changeAuction(AuctionChangesRequest auctionChangesRequest) {
+        Auction auction = findActiveAuctionForUser(auctionChangesRequest.getItemId());
+        if (auction == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Active auction not found for item: " + auctionChangesRequest.getItemId());
+        }
 
-                    return mongoTemplate.save(auction);
-                });
+        auction.setUpdatedAt(Instant.now().toEpochMilli());
+        auction.setIsActive(auctionChangesRequest.getIsActive());
+        auction.setBidsAcceptingTill(auctionChangesRequest.getChangeValidUntil());
+        auction.setIsPremium(auctionChangesRequest.getIsPremium());
+
+        return mongoTemplate.save(auction);
     }
 
-    public Mono<Auction> changeAuction(AuctionChangesRequest auctionChangesRequest) {
-        return mongoTemplate.findOne(Query.query(Criteria.where("itemId").is("itemId")), Auction.class)
-                .flatMap(auction -> {
-                    auction.setIsActive(true);
-                    auction.setManuallyToggled(false);
-                    auction.setBidsAcceptingTill(auctionChangesRequest.getChangeValidUntil());
-                    auction.setIsPremium(auctionChangesRequest.getIsPremium());
+    private Auction findActiveAuctionForUser(String itemId) {
+        Query query = Query.query(Criteria.where("itemId").is(itemId)
+                .and("isActive").is(true)
+                .and("creatorId").is(UserUtils.getUserId()));
 
-                    return mongoTemplate.save(auction);
-                });
-    }
-
-
-    //todo notify all related to auction
-    public Mono<Auction> closeAuction(ObjectId auctionId) {
-        return findAuction(auctionId)
-                .map(e -> {
-                    e.setIsActive(false);
-                    return e;
-                })
-                .flatMap(mongoTemplate::save);
-    }
-
-    public Mono<Auction> archiveAuction(ObjectId auctionId) {
-        return findAuction(auctionId)
-                .map(e -> {
-                    e.setIsArchived(true);
-                    e.setIsActive(false);
-                    return e;
-                })
-                .flatMap(mongoTemplate::save);
-    }
-
-    private Mono<AuctionCreationRequest> validateItemNotExists(AuctionCreationRequest request) {
-        return findAuctionForItemIdAndUserId(request.getItemId(), request.getUserId())
-                .hasElement()
-                .flatMap(hasElement -> {
-                    if (hasElement) {
-                        return Mono.error(new ItemDoesPersistException("Item bid already exists"));
-                    }
-                    return Mono.just(request);
-                })
-                .onErrorMap(ItemDoesPersistException.class,
-                        ex -> new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex));
-    }
-
-    public Mono<Tuple2<Bid, Auction>> searchForBidModel(BidCreationRequest creation) {
-        long userId = UserUtils.getUserId();
-        return findAuctionForItemIdAndUserId(creation.getItemId(), userId)
-                .onErrorMap(IllegalArgumentException.class, ex -> new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex))
-                .map(bidModel -> Tuples.of(Bid.builder()
-                        .auctionId(bidModel.getId())
-                        .userId(userId)
-                        .bidPrice(creation.getBidPrice())
-                        .build(), bidModel)
-                );
-    }
-
-    public Mono<Auction> findAuctionForItemId(String itemId) {
-        Query query = Query.query(Criteria.where("itemId").is(itemId));
         return mongoTemplate.findOne(query, Auction.class);
     }
 
-    public Mono<Auction> findAuction(String auctionId) {
+    public Auction closeAuction(ObjectId auctionId) {
+        Auction auction = findAuctionByIdAndUser(auctionId);
+        if (auction == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found with ID: " + auctionId);
+        }
+
+        auction.setUpdatedAt(Instant.now().toEpochMilli());
+        auction.setIsActive(false);
+
+        return mongoTemplate.save(auction);
+    }
+
+    public Auction archiveAuction(ObjectId auctionId) {
+        Auction auction = findAuctionByIdAndUser(auctionId);
+        if (auction == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found with ID: " + auctionId);
+        }
+
+        auction.setUpdatedAt(Instant.now().toEpochMilli());
+        auction.setIsActive(false);
+        auction.setIsArchived(true);
+
+        return mongoTemplate.save(auction);
+    }
+
+    private Auction findAuctionByIdAndUser(ObjectId auctionId) {
+        Query query = Query.query(Criteria.where("id").is(auctionId)
+                .and("creatorId").is(UserUtils.getUserId()));
+        return mongoTemplate.findOne(query, Auction.class);
+    }
+
+    public Tuple2<Bid, Auction> searchForBid(BidCreationRequest creation) {
+        Auction auction = findActiveAuctionForUser(creation.getItemId());
+        if (auction == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Active auction not found for item: " + creation.getItemId());
+        }
+
+        throw new UnsupportedOperationException("Bid creation logic needs to be implemented in searchForBid");
+    }
+
+    public Auction findAuction(String auctionId) {
         return findAuction(new ObjectId(auctionId));
     }
 
-    public Mono<Auction> findAuction(ObjectId auctionId) {
+    public Auction findAuction(ObjectId auctionId) {
         Query query = Query.query(Criteria.where("id").is(auctionId));
         return mongoTemplate.findOne(query, Auction.class);
     }
 
-    public Mono<Boolean> isItemCreatedByUser(String itemId) {
+    public Boolean isAuctionForItemCreatedByUser(String itemId) {
         Long currentUserId = UserUtils.getUserId();
         Query query = Query.query(Criteria.where("itemId").is(itemId)
-                .and("isActive").is(true));
+                .and("isActive").is(true)
+                .and("creatorId").is(currentUserId));
 
-        return mongoTemplate.findOne(query, Auction.class)
-                .map(item -> item.getCreatorId().equals(currentUserId));
+        return mongoTemplate.exists(query, Auction.class);
     }
 
-    public Mono<Auction> findAuctionForItemIdAndUserId(String itemId, Long userId) {
+    public Boolean isAuctionCreatedByUser(ObjectId auctionId) {
+        return isAuctionForItemCreatedByUser(auctionId.toHexString());
+    }
+
+    public Boolean isAuctionCreatedByUser(String auctionId) {
+        Long currentUserId = UserUtils.getUserId();
+        Query query = Query.query(Criteria.where("auctionId").is(auctionId)
+                .and("isActive").is(true)
+                .and("creatorId").is(currentUserId));
+
+        return mongoTemplate.exists(query, Auction.class);
+    }
+
+    public Auction findAuctionByItemUserAndStatus(String itemId, Boolean isActive) {
         Query query = Query.query(
                 Criteria.where("itemId").is(itemId)
-                        .and("creatorId").ne(userId)
-                        .and("isActive").is(true)
+                        .and("creatorId").is(UserUtils.getUserId())
+                        .and("isActive").is(isActive)
                         .and("bidsAcceptingTill")
-                        .gte(Instant.now().plus(2, TimeUnit.SECONDS.toChronoUnit()).toEpochMilli())
+                        .gte(Instant.now().toEpochMilli())
         );
 
         return mongoTemplate.findOne(query, Auction.class);
+    }
+
+    public Auction findAuctionForBid(String itemId, Boolean isActive) {
+        Query query = Query.query(
+                Criteria.where("itemId").is(itemId)
+                        .and("isActive").is(isActive)
+                        .and("bidsAcceptingTill")
+                        .gte(Instant.now().toEpochMilli())
+        );
+
+        return mongoTemplate.findOne(query, Auction.class);
+    }
+
+    public boolean checkActiveAuctionExists(String itemId) {
+        Query query = Query.query(
+                Criteria.where("itemId").is(itemId)
+                        .and("isActive").is(true)
+                        .and("bidsAcceptingTill")
+                        .gte(Instant.now().toEpochMilli())
+        );
+
+        return mongoTemplate.exists(query, Auction.class);
     }
 
     private Auction buildAuction(AuctionCreationRequest request) {
@@ -177,19 +210,18 @@ public class AuctionService {
                 .bidsLimit(request.getBidsLimit())
                 .isActive(true)
                 .manuallyToggled(false)
+                .createdAt(Instant.now().toEpochMilli())
+                .updatedAt(Instant.now().toEpochMilli())
                 .build();
     }
 
     private void saveToRedis(Auction model) {
         long ttl = model.getBidsAcceptingTill() - Instant.now().toEpochMilli();
-        ttlRedisTemplate.opsForValue()
-                .set(model.getId().toHexString(), model.getBidsAcceptingTill(), Duration.ofMillis(ttl))
-                .subscribe(success -> {
-                    if (success) {
-                        System.out.println("Entry set with expiration " + model.getId().toHexString());
-                    } else {
-                        System.out.println("Failed to set entry" + model.getId().toHexString());
-                    }
-                });
+        if (ttl > 0) {
+            ttlRedisTemplate.opsForValue().set(model.getId().toHexString(), model.getBidsAcceptingTill(), ttl, TimeUnit.MILLISECONDS);
+        } else {
+            log.warn("Auction {} has a bidsAcceptingTill time in the past. Not saving to Redis with TTL.", model.getId());
+            ttlRedisTemplate.opsForValue().set(model.getId().toHexString(), model.getBidsAcceptingTill());
+        }
     }
 }

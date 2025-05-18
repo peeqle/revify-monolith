@@ -41,6 +41,8 @@ public class Auction implements Serializable {
     private Boolean manuallyToggled;
 
     private Boolean isArchived;
-
     private Boolean isPremium = false;
+
+    private Long createdAt;
+    private Long updatedAt;
 }

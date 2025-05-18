@@ -6,28 +6,27 @@ import com.revify.monolith.bid.models.Bid;
 import com.revify.monolith.commons.auth.sync.UserUtils;
 import com.revify.monolith.commons.models.bid.BidCreationRequest;
 import com.revify.monolith.currency_reader.service.CurrencyService;
-import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.util.function.Tuple2;
 
 import java.time.Instant;
+import java.util.List;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class ManagementService {
 
-    private final ReactiveMongoTemplate mongoTemplate;
+    private final MongoTemplate mongoTemplate;
 
     private final CurrencyService currencyService;
 
@@ -35,19 +34,11 @@ public class ManagementService {
 
     private final OrderProducer orderProducer;
 
-    @Autowired
-    public ManagementService(ReactiveMongoTemplate mongoTemplate, CurrencyService currencyService, AuctionService auctionService, OrderProducer orderProducer) {
-        this.mongoTemplate = mongoTemplate;
-        this.currencyService = currencyService;
-        this.auctionService = auctionService;
-        this.orderProducer = orderProducer;
-    }
-
-    public Mono<Bid> findById(ObjectId id) {
+    public Bid findById(ObjectId id) {
         return mongoTemplate.findById(id, Bid.class);
     }
 
-    public Mono<Bid> findLastBidForAuction(ObjectId auctionId) {
+    public Bid findLastBidForAuction(ObjectId auctionId) {
         Query query = Query.query(
                 Criteria.where("auctionId").is(auctionId)
                         .and("published").is(true)
@@ -58,159 +49,125 @@ public class ManagementService {
 
     /**
      * Find last N items DESC
-     *
-     * @param forItem - first itemId, second number of elemnts
-     * @return
      */
-    public Flux<Bid> findLastBids(Mono<Tuple2<String, Integer>> forItem) {
-        return forItem.flatMapMany(e ->
-                auctionService.findAuctionForItemId(e.getT1())
-                        .flatMapMany(auction -> {
-                            Query query = Query.query(
-                                    Criteria.where("auctionId").is(auction.getId())
-                                            .and("published").is(true)
-                            ).limit(e.getT2()).with(Sort.by(Sort.Direction.DESC, "createdAt"));
+    public List<Bid> findLastBids(String itemId, Integer limit) {
+        Auction auction = auctionService.findAuctionByItemUserAndStatus(itemId, true);
+        if (auction == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found");
+        }
+        Query query = Query.query(
+                Criteria.where("auctionId").is(auction.getId())
+                        .and("published").is(true)
+        ).limit(limit).with(Sort.by(Sort.Direction.DESC, "createdAt"));
 
-                            return mongoTemplate.find(query, Bid.class);
-                        }).onErrorMap(IllegalArgumentException.class, ex -> new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex))
-        );
+        return mongoTemplate.find(query, Bid.class);
     }
 
-    public Mono<Long> countLastBids(Auction bidItemModel) {
-        Query query = Query.query(Criteria.where("auctionId").is(bidItemModel.getId())
+    public Long countLastBids(Auction auction) {
+        Query query = Query.query(Criteria.where("auctionId").is(auction.getId())
                 .and("published").is(true));
         return mongoTemplate.count(query, Bid.class);
     }
 
-    public Mono<Bid> findTerminatingBidForItem(ObjectId itemModelId) {
+    public Bid findTerminatingBidForItem(ObjectId itemModelId) {
         Query query = Query.query(
                 Criteria.where("auctionId").is(itemModelId)
                         .and("published").is(true)
-        ).limit(1).with(Sort.by(Sort.Direction.DESC, "createdAt"));
+        ).with(Sort.by(Sort.Direction.DESC, "createdAt"));
         return mongoTemplate.findOne(query, Bid.class);
     }
 
-    public Flux<Bid> findAllBids(String itemId) {
-        return auctionService.findAuctionForItemId(itemId)
-                .switchIfEmpty(Mono.error(new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Auction not found for item: " + itemId)))
-                .flatMapMany(auction -> {
-                    Query query = Query.query(
-                            Criteria.where("auctionId").is(auction.getId())
-                                    .and("published").is(true)
-                    ).with(Sort.by(Sort.Direction.DESC, "createdAt"));
-
-                    return mongoTemplate.find(query, Bid.class);
-                })
-                .onErrorResume(ex -> {
-                    if (ex instanceof IllegalArgumentException) {
-                        return Mono.error(new ResponseStatusException(
-                                HttpStatus.BAD_REQUEST, ex.getMessage(), ex));
-                    } else if (ex instanceof ResponseStatusException) {
-                        return Mono.error(ex);
-                    }
-                    return Mono.error(new ResponseStatusException(
-                            HttpStatus.INTERNAL_SERVER_ERROR, "Error retrieving bids", ex));
-                });
-    }
-
-    public Mono<Bid> createBid(@NonNull BidCreationRequest bidCreationRequest) {
-        return auctionService.isItemCreatedByUser(bidCreationRequest.getItemId())
-                .flatMap(isUserCreated -> {
-                    if (isUserCreated) {
-                        return Mono.error(new SelfAuctionBidException(bidCreationRequest.getItemId()));
-                    }
-
-                    return auctionService.searchForBidModel(bidCreationRequest)
-                            .switchIfEmpty(Mono.error(new RuntimeException("Cannot create bid for non existing item")))
-                            .flatMap(modelTuple ->
-                                    findLastBidForAuction(modelTuple.getT2().getId())
-                                            .switchIfEmpty(createFirstBid(modelTuple.getT2(), modelTuple.getT1()))
-                                            .flatMap(lastBid -> countLastBids(modelTuple.getT2())
-                                                    .flatMap(count -> tryCreateBid(modelTuple, lastBid, count)))
-                            )
-                            .onErrorMap(RuntimeException.class, ex -> new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex));
-                });
-    }
-
-    private Mono<Bid> tryCreateBid(Tuple2<Bid, Auction> modelTuple, Bid lastBid, Long count) {
-        Long currentUserId  = UserUtils.getUserId();
-        if (modelTuple.getT2().getBidsLimit() == null || count + 1 <= modelTuple.getT2().getBidsLimit()) {
-            if (lastBid == null) {
-                return Mono.just(modelTuple.getT1());
-            }
-            return Mono.zip(
-                            //check if bid is less than required max amount by the item publisher
-
-                            checkBidLessThanRequired(modelTuple)
-                                    .map(e -> e.getT1() || e.getT2())
-                                    .flatMap(isLessThanBaseRequest -> {
-                                        if (!isLessThanBaseRequest) {
-                                            return Mono.error(new IllegalArgumentException("Bid is greater than base requested price"));
-                                        }
-                                        return Mono.just(true);
-                                    }),
-                            //check if bod is less than previous price
-                            currencyService
-                                    .compare(CurrencyService.Operand.LT, modelTuple.getT1().getBidPrice(), lastBid.getBidPrice())
-                                    .flatMap(isLessThanLastBidPrice -> {
-                                        if (!isLessThanLastBidPrice) {
-                                            return Mono.error(new IllegalArgumentException("Bid is greater than last bid price"));
-                                        }
-                                        return Mono.just(true);
-                                    })
-                    )
-                    .map(sad -> sad.getT2() && sad.getT1())
-                    .map(x -> modelTuple.getT1())
-                    .flatMap(validatedLastBid -> {
-                        validatedLastBid.setUserId(currentUserId);
-                        validatedLastBid.setCreatedAt(Instant.now().toEpochMilli());
-                        validatedLastBid.setPublished(true);
-                        return mongoTemplate.save(validatedLastBid);
-                    });
+    public List<Bid> findAllBids(String itemId) {
+        Auction auction = auctionService.findAuctionByItemUserAndStatus(itemId, true);
+        if (auction == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found for item: " + itemId);
         }
-        return Mono.error(new RuntimeException("Cannot create new bid, cause bids limit exceeded"));
+        Query query = Query.query(
+                Criteria.where("auctionId").is(auction.getId())
+                        .and("published").is(true)
+        ).with(Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        return mongoTemplate.find(query, Bid.class);
     }
 
-    private Mono<Tuple2<Boolean, Boolean>> checkBidLessThanRequired(Tuple2<Bid, Auction> modelTuple) {
-        return Mono.zip(
+    public Bid createBid(BidCreationRequest bidCreationRequest) {
+        Auction auction = auctionService.findAuctionForBid(bidCreationRequest.getItemId(), true);
+        if (auction == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found for item: " + bidCreationRequest.getItemId());
+        }
+        Bid build = Bid.builder()
+                .auctionId(auction.getId())
+                .bidPrice(bidCreationRequest.getBidPrice())
+                .createdAt(bidCreationRequest.getCreatedAt())
+                .build();
+
+
+        Bid lastBidForAuction = findLastBidForAuction(auction.getId());
+        if (lastBidForAuction == null) {
+            return createFirstBid(auction, build);
+        }
+        return tryCreateBid(auction, build, lastBidForAuction, countLastBids(auction));
+    }
+
+    private Bid tryCreateBid(Auction auction, Bid newBid, Bid lastBid, Long count) {
+        Long currentUserId = UserUtils.getUserId();
+        if (auction.getBidsLimit() == null || count + 1 <= auction.getBidsLimit()) {
+            if (lastBid == null) {
+                return createFirstBid(auction, newBid);
+            }
+
+            if (isLessThanRequired(auction, newBid)) {
+                Boolean compare = currencyService
+                        .compare(CurrencyService.Operand.LT, newBid.getBidPrice(), lastBid.getBidPrice());
+                if (compare) {
+                    newBid.setUserId(currentUserId);
+                    newBid.setCreatedAt(Instant.now().toEpochMilli());
+                    newBid.setPublished(true);
+                    return mongoTemplate.save(newBid);
+                }
+            } else {
+                throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Bid must be less or equal than auction max delivery price");
+            }
+        }
+
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot create new bid, cause bids limit exceeded");
+    }
+
+    private boolean isLessThanRequired(Auction auction, Bid newBid) {
+        return
                 currencyService
                         .compare(CurrencyService.Operand.LT,
-                                modelTuple.getT1().getBidPrice(),
-                                modelTuple.getT2().getMaximumRequiredBidPrice()),
-                currencyService
-                        .compare(CurrencyService.Operand.EQ,
-                                modelTuple.getT1().getBidPrice(),
-                                modelTuple.getT2().getMaximumRequiredBidPrice()));
+                                newBid.getBidPrice(),
+                                auction.getMaximumRequiredBidPrice()) ||
+                        currencyService
+                                .compare(CurrencyService.Operand.EQ,
+                                        newBid.getBidPrice(),
+                                        auction.getMaximumRequiredBidPrice());
     }
 
-    private Mono<Bid> createFirstBid(Auction auction, Bid lastBid) {
-        Long currentUserId  = UserUtils.getUserId();
-        return Mono.zip(currencyService
-                                .compare(CurrencyService.Operand.LT, lastBid.getBidPrice(), auction.getMaximumRequiredBidPrice())
-                        , currencyService
-                                .compare(CurrencyService.Operand.EQ, lastBid.getBidPrice(), auction.getMaximumRequiredBidPrice()))
-                .map(x -> x.getT1() || x.getT2())
-                .flatMap(isLessThanBaseRequest -> {
-                    if (!isLessThanBaseRequest) {
-                        return Mono.error(new IllegalArgumentException("Bid is greater than base requested price"));
-                    }
-                    return Mono.just(true);
-                })
-                .map(bid -> lastBid)
-                .flatMap(bid -> {
-                    bid.setUserId(currentUserId);
-                    bid.setCreatedAt(Instant.now().toEpochMilli());
-                    bid.setPublished(true);
-                    return mongoTemplate.save(bid);
-                });
+    private Bid createFirstBid(Auction auction, Bid newBid) {
+        if (isLessThanRequired(auction, newBid)) {
+            newBid.setUserId(UserUtils.getUserId());
+            newBid.setCreatedAt(Instant.now().toEpochMilli());
+            newBid.setPublished(true);
+            return mongoTemplate.save(newBid);
+        }
+
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot create new bid");
     }
 
-    public Mono<Void> finishAuction(ObjectId auctionId, ObjectId selectedBid) {
-        return auctionService.closeAuction(auctionId)
-                .flatMap(auction ->
-                        findById(selectedBid)
-                                .doOnError((s) -> log.error("Failed to finish auction {}", auctionId.toHexString(), s))
-                                .doOnSuccess(bid -> orderProducer.createOrder(auction, bid))).then();
+    public Auction finishAuction(ObjectId auctionId, ObjectId selectedBid) {
+        Auction auction = auctionService.closeAuction(auctionId);
+        if (auction == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found for item: " + auctionId);
+        }
+
+        Bid bid = findById(selectedBid);
+        if (bid == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Bid is not found for item: " + auctionId);
+        }
+        orderProducer.createOrder(auction, bid);
+
+        return auction;
     }
 }
