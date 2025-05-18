@@ -17,7 +17,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Mono;
 
 import java.util.List;
 
@@ -39,7 +38,7 @@ public class ItemController {
     @PostMapping("/create")
     public ResponseEntity<ItemDTO> createItem(@RequestBody ItemCreationDTO creationDTO) {
         Item item = itemWriteService.createItem(creationDTO);
-        if(item != null) {
+        if (item != null) {
             return ResponseEntity.ok(ItemDTO.from(item));
         }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
@@ -48,7 +47,7 @@ public class ItemController {
     @PatchMapping("/change")
     public ResponseEntity<ItemDTO> changeItem(@RequestBody ItemUpdatesDTO updates) {
         Item item = itemService.updateItem(updates);
-        if(item != null) {
+        if (item != null) {
             return ResponseEntity.ok(ItemDTO.from(item));
         }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
@@ -56,13 +55,11 @@ public class ItemController {
 
     @GetMapping("/{itemId}")
     public ResponseEntity<ItemDTO> getItem(@PathVariable ObjectId itemId) {
-        return itemReadService.findById(itemId)
-                .map(item -> ResponseEntity.ok(ItemUtils.from(item)))
-                .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()))
-                .onErrorResume(e -> {
-                    log.error("Error fetching item with id: {}", itemId, e);
-                    return Mono.just(ResponseEntity.internalServerError().build());
-                });
+        Item byId = itemReadService.findById(itemId);
+        if (byId != null) {
+            return ResponseEntity.ok(ItemDTO.from(byId));
+        }
+        return ResponseEntity.notFound().build();
     }
 
     @PostMapping("/toggle-active")

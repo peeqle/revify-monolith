@@ -16,7 +16,6 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-import reactor.core.publisher.Mono;
 
 import java.time.Instant;
 import java.util.List;
@@ -42,7 +41,9 @@ public class ManagementService {
         Query query = Query.query(
                 Criteria.where("auctionId").is(auctionId)
                         .and("published").is(true)
-        ).with(Sort.by(Sort.Direction.DESC, "createdAt"));
+        ).with(Sort.by(Sort.Direction.DESC, "createdAt")
+                //todo placed bids are always the currency of the items - create it
+                .and(Sort.by(Sort.Direction.ASC, "price.amount")));
 
         return mongoTemplate.findOne(query, Bid.class);
     }
@@ -95,22 +96,24 @@ public class ManagementService {
         if (auction == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found for item: " + bidCreationRequest.getItemId());
         }
-        Bid build = Bid.builder()
+        Bid newBid = Bid.builder()
                 .auctionId(auction.getId())
-                .bidPrice(bidCreationRequest.getBidPrice())
+                .bidPrice(bidCreationRequest.getPrice())
                 .createdAt(bidCreationRequest.getCreatedAt())
                 .build();
 
 
         Bid lastBidForAuction = findLastBidForAuction(auction.getId());
         if (lastBidForAuction == null) {
-            return createFirstBid(auction, build);
+            lastBidForAuction = createFirstBid(auction, newBid);
+        } else {
+            lastBidForAuction = tryCreateBid(auction, newBid, lastBidForAuction, countLastBids(auction));
         }
-        return tryCreateBid(auction, build, lastBidForAuction, countLastBids(auction));
+
+        return lastBidForAuction;
     }
 
     private Bid tryCreateBid(Auction auction, Bid newBid, Bid lastBid, Long count) {
-        Long currentUserId = UserUtils.getUserId();
         if (auction.getBidsLimit() == null || count + 1 <= auction.getBidsLimit()) {
             if (lastBid == null) {
                 return createFirstBid(auction, newBid);
@@ -120,7 +123,7 @@ public class ManagementService {
                 Boolean compare = currencyService
                         .compare(CurrencyService.Operand.LT, newBid.getBidPrice(), lastBid.getBidPrice());
                 if (compare) {
-                    newBid.setUserId(currentUserId);
+                    newBid.setUserId(UserUtils.getUserId());
                     newBid.setCreatedAt(Instant.now().toEpochMilli());
                     newBid.setPublished(true);
                     return mongoTemplate.save(newBid);

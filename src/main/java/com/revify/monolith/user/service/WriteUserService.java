@@ -8,11 +8,14 @@ import com.revify.monolith.commons.models.user.RegisterRequest;
 import com.revify.monolith.keycloak.KeycloakService;
 import com.revify.monolith.user.models.UserActionTaskStatus;
 import com.revify.monolith.user.models.user.AppUser;
+import com.revify.monolith.user.models.user.AppUserOptions;
+import com.revify.monolith.user.models.user.additional.rating.UserRating;
 import com.revify.monolith.user.service.data.AppUserWriteRepository;
 import com.revify.monolith.user.service.phone_messaging.PhoneInteractionService;
 import com.revify.monolith.user.service.util.UserValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.units.qual.A;
 import org.springframework.core.env.Environment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.scheduling.annotation.Async;
@@ -137,6 +140,10 @@ public class WriteUserService extends CrudService<AppUser> {
         appUser.setEmail(registerRequest.getEmail());
         appUser.setFirstName(registerRequest.getFirstName());
         appUser.setLastName(registerRequest.getLastName());
+
+        AppUserOptions appUserOptions = new AppUserOptions();
+        appUserOptions.setUserRating(UserRating.defaultRating());
+        appUser.setAppUserOptions(appUserOptions);
 
         return appUser;
     }

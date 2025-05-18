@@ -53,8 +53,8 @@ public class ItemChangesComparator {
         if (dto.getDescription() != null) {
             initial.setDescription(dto.getDescription());
         }
-        if (dto.getCategory() != null) {
-            initial.setCategories(dto.getCategory());
+        if (dto.getCategories() != null) {
+            initial.setCategories(dto.getCategories());
         }
         if (dto.getShopReference() != null) {
             initial.setShopReference(dto.getShopReference());
@@ -87,22 +87,6 @@ public class ItemChangesComparator {
         if (result != 0) return result;
 
         result = compareNullableStrings(o1.getDescription(), o2.getDescription());
-        if (result != 0) return result;
-
-        result = Objects.compare(
-                o1.getCategories(),
-                o2.getCategories(),
-                Comparator.nullsFirst(
-                        (l1, l2) -> {
-                            if (l1 == l2) return 0;
-                            for (int i = 0; i < Math.min(l1.size(), l2.size()); i++) {
-                                int cmp = CharSequence.compare(l1.get(i), l2.get(i));
-                                if (cmp != 0) return cmp;
-                            }
-                            return Integer.compare(l1.size(), l2.size());
-                        }
-                )
-        );
         if (result != 0) return result;
 
         result = compareNullableStrings(o1.getShopReference(), o2.getShopReference());

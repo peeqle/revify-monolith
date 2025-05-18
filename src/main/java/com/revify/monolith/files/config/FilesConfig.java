@@ -19,8 +19,6 @@ public class FilesConfig {
 
     private final MongoConverter mongoConverter;
 
-    private final ReactiveMongoDatabaseFactory reactiveMongoDatabaseFactory;
-
     private final MongoDatabaseFactory mongoDatabaseFactory;
 
     @Bean
@@ -31,11 +29,6 @@ public class FilesConfig {
     @Bean
     public Gson gson() {
         return gsonBuilder().create();
-    }
-
-    @Bean
-    public ReactiveGridFsTemplate reactiveGridFsTemplate() {
-        return new ReactiveGridFsTemplate(reactiveMongoDatabaseFactory, mongoConverter);
     }
 
     @Bean

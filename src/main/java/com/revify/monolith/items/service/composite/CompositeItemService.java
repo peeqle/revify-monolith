@@ -12,8 +12,6 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 import java.util.HashSet;
 import java.util.List;
@@ -77,14 +75,14 @@ public class CompositeItemService {
     }
 
     public CompositeItem updateCompositeItem(String compositeItemId, Map<String, Object> updates) {
-        CompositeItem byId = findById(compositeItemId);
+        CompositeItem compositeItem = findById(compositeItemId);
 
-        if (byId == null) return Mono.error(new RuntimeException("Cannot find composite item"));
+        if (compositeItem == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Composite item not found");
         for (Map.Entry<String, Object> entry : updates.entrySet()) {
             applyUpdate(compositeItem, entry.getKey(), entry.getValue());
         }
 
-        return mongoTemplate.save(byId);
+        return mongoTemplate.save(compositeItem);
     }
 
     public Boolean deleteCompositeInstance(String compositeItemId) {
@@ -104,19 +102,6 @@ public class CompositeItemService {
         Query query = Query.query(findForInitialItem(initialItemId))
                 .addCriteria(activeCriteria());
         return mongoTemplate.exists(query, CompositeItem.class);
-    }
-
-    /*
-    find all elements that could be used for composition
-     */
-
-    public Flux<CompositeItem> findCompositeItemsContaining(String itemId) {
-        Query query = new Query();
-        query.addCriteria(compositeContainsItemInvolved(itemId));
-        query.addCriteria(filterInitialItem(itemId));
-        query.addCriteria(filterNonAvailableComposites());
-
-        return mongoTemplate.find(query, CompositeItem.class);
     }
 
     private void applyUpdate(CompositeItem item, String key, Object value) {

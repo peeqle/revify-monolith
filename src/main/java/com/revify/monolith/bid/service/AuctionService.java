@@ -170,7 +170,6 @@ public class AuctionService {
     public Auction findAuctionByItemUserAndStatus(String itemId, Boolean isActive) {
         Query query = Query.query(
                 Criteria.where("itemId").is(itemId)
-                        .and("creatorId").is(UserUtils.getUserId())
                         .and("isActive").is(isActive)
                         .and("bidsAcceptingTill")
                         .gte(Instant.now().toEpochMilli())

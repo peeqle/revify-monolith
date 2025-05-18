@@ -20,8 +20,8 @@ public class PhoneActivationController {
     private final PhoneInteractionService phoneInteractionService;
 
     @PostMapping("/phone-code-enable")
-    public ResponseEntity<?> enableWithCode(@RequestParam("countryCode") String countryCode) {
-        return ResponseEntity.ok(userService.checkCodeAndEnable(countryCode));
+    public ResponseEntity<?> enableWithCode(@RequestParam("providedCode") String providedCode) {
+        return ResponseEntity.ok(userService.checkCodeAndEnable(providedCode));
     }
 
     @PostMapping("/phone-code-resend")

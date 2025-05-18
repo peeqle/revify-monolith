@@ -2,61 +2,56 @@ package com.revify.monolith.items.service.composite;
 
 import com.revify.monolith.items.model.item.composite.CompositeItemUniteRequest;
 import com.revify.monolith.items.utils.CompositeItemUniteRequestCriteriaUtil;
-import io.vavr.Tuple;
+import lombok.RequiredArgsConstructor;
 import org.bson.types.ObjectId;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
+
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 
 @Service
+@RequiredArgsConstructor
 public class CompositeItemUniteRequestService {
 
-    private final ReactiveMongoTemplate mongoTemplate;
+    private final MongoTemplate mongoTemplate;
 
-    public CompositeItemUniteRequestService(ReactiveMongoTemplate mongoTemplate) {
-        this.mongoTemplate = mongoTemplate;
+    public CompositeItemUniteRequest createComposeItemRequest(String itemId, String compositeItemId) {
+
+        Query query = Query.query(CompositeItemUniteRequestCriteriaUtil.containsItemId(itemId))
+                .addCriteria(CompositeItemUniteRequestCriteriaUtil.hasCompositeItemId(compositeItemId));
+
+        boolean exists = mongoTemplate.exists(query, CompositeItemUniteRequest.class);
+        if (exists) {
+            throw new ResponseStatusException(BAD_REQUEST, "Composite item unite request for provided items already exists");
+        }
+
+        CompositeItemUniteRequest compositeItemUniteRequest = new CompositeItemUniteRequest();
+        compositeItemUniteRequest.setItemId(itemId);
+        compositeItemUniteRequest.setCompositeItemId(compositeItemId);
+
+        return mongoTemplate.save(compositeItemUniteRequest);
     }
 
-    public Mono<CompositeItemUniteRequest> createComposeItemRequest(String itemId, String compositeItemId) {
-        return Mono.just(Tuple.of(itemId, compositeItemId))
-                .flatMap(tuple -> {
-                    Query query = Query.query(CompositeItemUniteRequestCriteriaUtil.containsItemId(tuple._1))
-                            .addCriteria(CompositeItemUniteRequestCriteriaUtil.hasCompositeItemId(tuple._2));
-
-                    return mongoTemplate.exists(query, CompositeItemUniteRequest.class)
-                            .flatMap(has -> {
-                                if (has) {
-                                    return Mono.error(new RuntimeException("Composite item unite request for provided items already exists"));
-                                }
-
-                                CompositeItemUniteRequest compositeItemUniteRequest = new CompositeItemUniteRequest();
-                                compositeItemUniteRequest.setItemId(tuple._1);
-                                compositeItemUniteRequest.setCompositeItemId(tuple._2);
-
-                                return mongoTemplate.save(compositeItemUniteRequest);
-                            });
-                });
-    }
-
-    public Flux<CompositeItemUniteRequest> findAllForItem(String itemId) {
+    public List<CompositeItemUniteRequest> findAllForItem(String itemId) {
         Query query = Query.query(CompositeItemUniteRequestCriteriaUtil.containsItemId(itemId));
         return mongoTemplate.find(query, CompositeItemUniteRequest.class);
     }
 
-    public Mono<CompositeItemUniteRequest> getComposeItemRequest(ObjectId uniteId) {
+    public CompositeItemUniteRequest getComposeItemRequest(ObjectId uniteId) {
         Query query = Query.query(CompositeItemUniteRequestCriteriaUtil.hasId(uniteId));
 
         return mongoTemplate.findOne(query, CompositeItemUniteRequest.class);
     }
 
-    public Mono<Boolean> deleteComposeItemRequest(ObjectId uniteId) {
+    public Boolean deleteComposeItemRequest(ObjectId uniteId) {
         Query query = Query.query(CompositeItemUniteRequestCriteriaUtil.hasId(uniteId));
 
-        return mongoTemplate.remove(query, CompositeItemUniteRequest.class)
-                .map(result -> result.getDeletedCount() > 0);
+        return mongoTemplate.remove(query, CompositeItemUniteRequest.class).getDeletedCount() > 0;
     }
 }

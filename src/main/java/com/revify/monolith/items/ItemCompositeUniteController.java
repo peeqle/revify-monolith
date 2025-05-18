@@ -6,10 +6,11 @@ import com.revify.monolith.items.service.composite.CompositeItemUniteRequestServ
 import com.revify.monolith.items.service.composite.CompositionService;
 import lombok.RequiredArgsConstructor;
 import org.bson.types.ObjectId;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/item/composite-unite")
@@ -22,31 +23,39 @@ public class ItemCompositeUniteController {
     private final CompositeItemUniteRequestService compositeItemUniteRequestService;
 
     @GetMapping("/for-item")
-    public Flux<CompositeItemUniteRequest> findForItem(@RequestParam("itemId") String itemId) {
-        return compositeItemUniteRequestService.findAllForItem(itemId);
+    public ResponseEntity<List<CompositeItemUniteRequest>> findForItem(@RequestParam("itemId") String itemId) {
+        return ResponseEntity.ok(compositeItemUniteRequestService.findAllForItem(itemId));
     }
 
     @PostMapping("/accept")
-    public Mono<CompositeItem> acceptComposition(@RequestParam("compositeItemRequestId") String compositeItemRequestId) {
+    public ResponseEntity<CompositeItem> acceptComposition(@RequestParam("compositeItemRequestId") String compositeItemRequestId) {
         if (!ObjectId.isValid(compositeItemRequestId)) {
-            return Mono.error(new IllegalArgumentException("Invalid compositeItemRequestId"));
+            return ResponseEntity.badRequest().build();
         }
-        return compositionService.acceptComposition(compositeItemRequestId);
+        CompositeItem compositeItem = compositionService.acceptComposition(compositeItemRequestId);
+        if (compositeItem == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(compositeItem);
     }
 
     /*
     create request to composite item instance creator
      */
     @PostMapping("/create-compose-request")
-    public Mono<CompositeItemUniteRequest> createCompositionRequest(@RequestParam("itemId") String itemId, @RequestParam("compositeItemId") String compositeItemId) {
-        return compositeItemUniteRequestService.createComposeItemRequest(itemId, compositeItemId);
+    public ResponseEntity<CompositeItemUniteRequest> createCompositionRequest(@RequestParam("itemId") String itemId, @RequestParam("compositeItemId") String compositeItemId) {
+        CompositeItemUniteRequest composeItemRequest = compositeItemUniteRequestService.createComposeItemRequest(itemId, compositeItemId);
+        if (composeItemRequest == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(composeItemRequest);
     }
 
     @DeleteMapping("/delete-compose-request")
-    public Mono<Boolean> deleteCompositionRequest(@RequestParam("compositeItemId") String compositeItemId) {
+    public ResponseEntity<Boolean> deleteCompositionRequest(@RequestParam("compositeItemId") String compositeItemId) {
         if (!ObjectId.isValid(compositeItemId)) {
-            return Mono.error(new IllegalArgumentException("Invalid compositeItemId"));
+            return ResponseEntity.badRequest().build();
         }
-        return compositeItemUniteRequestService.deleteComposeItemRequest(new ObjectId(compositeItemId));
+        return ResponseEntity.ok(compositeItemUniteRequestService.deleteComposeItemRequest(new ObjectId(compositeItemId)));
     }
 }

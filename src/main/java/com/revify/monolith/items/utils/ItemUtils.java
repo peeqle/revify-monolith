@@ -63,7 +63,7 @@ public class ItemUtils {
                         .title(itemCreation.description().getTitle())
 
                         .url(itemCreation.description().getUrl())
-                        .category(itemCreation.description().getCategory())
+                        .categories(itemCreation.description().getCategories())
                         .shopReference(itemCreation.description().getShopReference())
 
                         .compositeStackingEnabled(itemCreation.description().getCompositeStackingEnabled())

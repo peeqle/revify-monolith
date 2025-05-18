@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.data.mongodb.core.index.GeoSpatialIndexType;
 import org.springframework.data.mongodb.core.index.GeospatialIndex;
@@ -18,29 +19,21 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class MongoIndexesInitializer {
 
-    private final ReactiveMongoTemplate mongoTemplate;
+    private final MongoTemplate mongoTemplate;
 
     @EventListener(ApplicationReadyEvent.class)
     public void initIndexes() {
         mongoTemplate.indexOps(UserGeolocation.class)
-                .ensureIndex(new Index("userId", Sort.Direction.DESC))
-                .subscribe(success -> System.out.println("Index created: " + success),
-                        error -> System.err.println("Error creating index: " + error));
+                .ensureIndex(new Index("userId", Sort.Direction.DESC));
 
         mongoTemplate.indexOps(UserGeolocation.class)
-                .ensureIndex(new GeospatialIndex("current.location").typed(GeoSpatialIndexType.GEO_2DSPHERE))
-                .subscribe(success -> System.out.println("Index created: " + success),
-                        error -> System.err.println("Error creating index: " + error));
+                .ensureIndex(new GeospatialIndex("current.location").typed(GeoSpatialIndexType.GEO_2DSPHERE));
 
         // item indexes
         mongoTemplate.indexOps(Item.class)
-                .ensureIndex(new GeospatialIndex("itemDescription.destination.location").typed(GeoSpatialIndexType.GEO_2DSPHERE))
-                .subscribe(success -> System.out.println("Index created: " + success),
-                        error -> System.err.println("Error creating index: " + error));
+                .ensureIndex(new GeospatialIndex("itemDescription.destination.location").typed(GeoSpatialIndexType.GEO_2DSPHERE));
 
         mongoTemplate.indexOps(CompositeItem.class)
-                .ensureIndex(new GeospatialIndex("destination.location").typed(GeoSpatialIndexType.GEO_2DSPHERE))
-                .subscribe(success -> System.out.println("Index created: " + success),
-                        error -> System.err.println("Error creating index: " + error));
+                .ensureIndex(new GeospatialIndex("destination.location").typed(GeoSpatialIndexType.GEO_2DSPHERE));
     }
 }

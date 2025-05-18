@@ -22,25 +22,25 @@ public class AuctionConsumer {
 
     private final Gson gson = new GsonBuilder().create();
 
-    @KafkaListener(topics = KafkaTopic.AUCTION_CREATION, groupId = ConsumerGroups.BIDS)
-    public void listenAuctionCreation(@Payload String message) {
-        System.out.println("Received Message: " + message);
-
-        AuctionCreationRequest auctionCreationRequest = gson.fromJson(message, AuctionCreationRequest.class);
-        if (message != null && !message.isEmpty() && auctionCreationRequest != null) {
-            auctionService.createAuction(auctionCreationRequest);
-        }
-    }
-
-    @KafkaListener(topics = KafkaTopic.AUCTION_DEACTIVATION, groupId = ConsumerGroups.BIDS)
-    public void listenAuctionDeactivation(@Payload String message) {
-        System.out.println("Received Message: " + message);
-
-        AuctionToggleRequest auctionToggleRequest = gson.fromJson(message, AuctionToggleRequest.class);
-        if (message != null && !message.isEmpty() && auctionToggleRequest != null) {
-            auctionService.toggleAuctionStatus(auctionToggleRequest);
-        }
-    }
+//    @KafkaListener(topics = KafkaTopic.AUCTION_CREATION, groupId = ConsumerGroups.BIDS)
+//    public void listenAuctionCreation(@Payload String message) {
+//        System.out.println("Received Message: " + message);
+//
+//        AuctionCreationRequest auctionCreationRequest = gson.fromJson(message, AuctionCreationRequest.class);
+//        if (message != null && !message.isEmpty() && auctionCreationRequest != null) {
+//            auctionService.createAuction(auctionCreationRequest);
+//        }
+//    }
+//
+//    @KafkaListener(topics = KafkaTopic.AUCTION_DEACTIVATION, groupId = ConsumerGroups.BIDS)
+//    public void listenAuctionDeactivation(@Payload String message) {
+//        System.out.println("Received Message: " + message);
+//
+//        AuctionToggleRequest auctionToggleRequest = gson.fromJson(message, AuctionToggleRequest.class);
+//        if (message != null && !message.isEmpty() && auctionToggleRequest != null) {
+//            auctionService.toggleAuctionStatus(auctionToggleRequest);
+//        }
+//    }
 
 
     //todo handle errors with auction

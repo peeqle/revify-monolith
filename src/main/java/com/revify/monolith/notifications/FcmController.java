@@ -10,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
-import reactor.core.publisher.Mono;
 
 import javax.annotation.security.PermitAll;
 
@@ -24,15 +23,18 @@ public class FcmController {
     private final FcmTokenService fcmTokenService;
 
     @PostMapping("/save-token")
-    public Mono<ResponseEntity<FirebaseToken>> saveToken(FirebaseTokenDTO tokenDTO) {
+    public ResponseEntity<FirebaseToken> saveToken(FirebaseTokenDTO tokenDTO) {
         if (tokenDTO == null) {
             throw new RuntimeException("Token for cannot be NULL");
         }
         FirebaseToken firebaseToken = TokenMapper.from(tokenDTO);
-
         firebaseToken.setUserId(UserUtils.getUserId());
-        return fcmTokenService.saveToken(firebaseToken)
-                .map(ResponseEntity::ok)
-                .defaultIfEmpty(ResponseEntity.notFound().build());
+
+        firebaseToken = fcmTokenService.saveToken(firebaseToken);
+
+        if (firebaseToken == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(firebaseToken);
     }
 }

@@ -1,15 +1,13 @@
 package com.revify.monolith.commons.items;
 
 import com.revify.monolith.commons.finance.Price;
-import com.revify.monolith.items.model.item.Item;
 import com.revify.monolith.items.model.item.ItemDescription;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.io.Serial;
-import java.util.List;
+import java.util.Set;
 
 @Data
 @Builder
@@ -19,7 +17,7 @@ public class ItemDescriptionDTO {
     private String title;
     private String description;
 
-    private List<String> category;
+    private Set<String> categories;
     private String shopReference;
     private String url;
 
@@ -41,7 +39,7 @@ public class ItemDescriptionDTO {
         return ItemDescriptionDTO.builder()
                 .title(item.getTitle())
                 .description(item.getDescription())
-                .category(item.getCategories())
+                .categories(item.getCategories())
                 .shopReference(item.getShopReference())
                 .url(item.getUrl())
                 .maximumRequiredBidPrice(item.getMaximumRequiredBidPrice())

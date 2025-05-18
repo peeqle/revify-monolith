@@ -41,4 +41,12 @@ public class UserRating implements Serializable {
             reactions.add(reactionLongTuple2.update2(reactionLongTuple2._2() + 1L));
         }
     }
+
+    public static UserRating defaultRating() {
+        UserRating userRating = new UserRating();
+        userRating.ratingCount = 0L;
+        userRating.reactions = new LinkedList<>();
+        userRating.rating = 5.0;
+        return userRating;
+    }
 }

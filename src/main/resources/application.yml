@@ -70,3 +70,4 @@ logging:
   level:
     org.apache.kafka: WARN
     org.springframework.web: DEBUG
+    com.mongodb: DEBUG

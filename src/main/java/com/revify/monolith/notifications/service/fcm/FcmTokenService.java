@@ -3,12 +3,11 @@ package com.revify.monolith.notifications.service.fcm;
 
 import com.revify.monolith.notifications.domain.FirebaseToken;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 import java.util.List;
 
@@ -16,20 +15,25 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FcmTokenService {
 
-    private final ReactiveMongoTemplate reactiveMongoTemplate;
+    private final MongoTemplate mongoTemplate;
 
-    public Mono<FirebaseToken> saveToken(FirebaseToken firebaseToken) {
-        return findTokenByUserId(firebaseToken.getUserId())
-                .flatMap(reactiveMongoTemplate::save);
+    public FirebaseToken saveToken(FirebaseToken firebaseToken) {
+        FirebaseToken tokenByUserId = findTokenByUserId(firebaseToken.getUserId());
+        if (tokenByUserId != null) {
+            return mongoTemplate.save(firebaseToken);
+        }
+        return firebaseToken;
     }
 
-    public Mono<FirebaseToken> findTokenByUserId(Long userId) {
-        Query query = Query.query(Criteria.where("userId").is(userId));
-        return reactiveMongoTemplate.find(query, FirebaseToken.class).single();
+    public FirebaseToken findTokenByUserId(Long userId) {
+        Query query = Query.query(Criteria.where("userId").is(userId))
+                .with(Sort.by(Sort.Direction.DESC, "createdAt"));
+        return mongoTemplate.findOne(query, FirebaseToken.class);
     }
 
-    public Flux<FirebaseToken> findTokens(List<Long> userIds) {
-        Query query = Query.query(Criteria.where("userId").in(userIds));
-        return reactiveMongoTemplate.find(query, FirebaseToken.class);
+    public List<FirebaseToken> findTokens(List<Long> userIds) {
+        Query query = Query.query(Criteria.where("userId").in(userIds))
+                .with(Sort.by(Sort.Direction.DESC, "createdAt"));
+        return mongoTemplate.find(query, FirebaseToken.class);
     }
 }

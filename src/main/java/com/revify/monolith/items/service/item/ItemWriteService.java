@@ -2,6 +2,7 @@ package com.revify.monolith.items.service.item;
 
 import com.nimbusds.jose.shaded.gson.Gson;
 import com.nimbusds.jose.shaded.gson.GsonBuilder;
+import com.revify.monolith.bid.service.AuctionService;
 import com.revify.monolith.commons.auth.sync.UserUtils;
 import com.revify.monolith.commons.items.ItemCreationDTO;
 import com.revify.monolith.commons.messaging.dto.FanoutMessageBody;
@@ -27,6 +28,8 @@ public class ItemWriteService {
 
     private final MongoTemplate mongoTemplate;
 
+    private final AuctionService auctionService;
+
     private final FanoutNotificationProducer fanoutNotificationProducer;
 
     private final KafkaTemplate<String, String> kafkaTemplate;
@@ -41,18 +44,18 @@ public class ItemWriteService {
         if (newItem.getId() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item creation failed");
         }
-        kafkaTemplate.send(AUCTION_CREATION,
-                gson.toJson(
-                        AuctionCreationRequest.defaultBuilder()
-                                .bidsAcceptingTill(newItem.getValidUntil())
-                                .itemId(newItem.getId().toHexString())
-                                .userId(UserUtils.getUserId())
-                                .maximumRequiredBidPrice(newItem.getItemDescription().getMaximumRequiredBidPrice())
-                                .build()
-                )
-        );
 
+        {
+            //create auction
+            auctionService.createAuction(AuctionCreationRequest.defaultBuilder()
+                    .bidsAcceptingTill(newItem.getValidUntil())
+                    .itemId(newItem.getId().toHexString())
+                    .userId(UserUtils.getUserId())
+                    .maximumRequiredBidPrice(newItem.getItemDescription().getMaximumRequiredBidPrice())
+                    .build());
+        }
 
+        //send item for deeper processing
         if (!newItem.getReferenceUrl().isEmpty()) {
             kafkaTemplate.send(ITEM_PROCESSING_MODEL,
                     gson.toJson(
@@ -88,15 +91,15 @@ public class ItemWriteService {
         item.setManuallyToggled(true);
 
         item = mongoTemplate.save(item);
-        kafkaTemplate.send(AUCTION_DEACTIVATION,
-                gson.toJson(
-                        AuctionToggleRequest.builder()
-                                .manuallyToggled(true)
-                                .status(active)
-                                .itemId(item.getId().toHexString())
-                                .build()
-                )
-        );
+
+        {
+            //auction deactivation
+            auctionService.toggleAuctionStatus(AuctionToggleRequest.builder()
+                    .manuallyToggled(true)
+                    .status(active)
+                    .itemId(item.getId().toHexString())
+                    .build());
+        }
 
         return item;
     }

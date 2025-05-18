@@ -8,6 +8,6 @@ import java.time.Instant;
 @Data
 public class BidCreationRequest {
     private String itemId;
-    private Price bidPrice;
+    private Price price;
     private Long createdAt = Instant.now().toEpochMilli();
 }
