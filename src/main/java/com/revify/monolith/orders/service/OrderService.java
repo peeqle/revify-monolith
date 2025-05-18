@@ -17,22 +17,23 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.bson.types.ObjectId;
-import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class OrderWriteService {
+public class OrderService {
 
-    private final OrderReadService orderReadService;
-
-    private final ReactiveMongoTemplate mongoTemplate;
+    private final MongoTemplate mongoTemplate;
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
@@ -41,30 +42,39 @@ public class OrderWriteService {
     //todo remove and use direct, when normal integration utils arise
     private final FanoutNotificationProducer notificationProducer;
 
-    public Mono<Order> createOrder(OrderCreationDTO orderDto) {
-        return saveOrder(OrderMapper.to(orderDto))
-                .doOnSuccess(order -> sendFanoutNotification(
-                        "Order Created",
-                        "Order ID: " + order.getId().toHexString() + " created."
-                ));
+    public Order createOrder(OrderCreationDTO orderDto) {
+        Order newOrder = mongoTemplate.save(OrderMapper.to(orderDto));
+        if (newOrder.getId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order creation failed");
+        }
+        sendFanoutNotification(
+                "Order Created",
+                "Order ID: " + newOrder.getId().toHexString() + " created."
+        );
+        return newOrder;
     }
 
     //better create unified service for deps like write->read, to escape future circular and for the most part stay in cqrs
-    public Mono<Order> updateOrderStatus(OrderStatusUpdateRequest orderStatusUpdateRequest) {
+    public Order updateOrderStatus(OrderStatusUpdateRequest orderStatusUpdateRequest) {
         return updateOrderStatus(orderStatusUpdateRequest.orderId(), orderStatusUpdateRequest.newStatus());
     }
 
-    public Mono<Order> updateOrderStatus(String orderId, OrderShipmentStatus newStatus) {
+    public Order updateOrderStatus(String orderId, OrderShipmentStatus newStatus) {
         return updateOrderStatus(new ObjectId(orderId), newStatus);
     }
 
-    public Mono<Order> updateOrderStatus(ObjectId orderId, OrderShipmentStatus newStatus) {
-        return orderReadService.findOrderById(orderId)
-                .flatMap(order -> saveOrder(applyStatusUpdate(order, newStatus)))
-                .doOnSuccess(order -> sendFanoutNotification(
-                        "Status Updated",
-                        "Order ID: " + order.getId().toHexString() + " updated to: " + order.getStatus()
-                ));
+    public Order updateOrderStatus(ObjectId orderId, OrderShipmentStatus newStatus) {
+        Order order = findOrderById(orderId);
+        if (order == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order not found");
+        }
+        Order save = mongoTemplate.save(applyStatusUpdate(order, newStatus));
+        sendFanoutNotification(
+                "Status Updated",
+                "Order ID: " + save.getId().toHexString() + " updated to: " + save.getStatus()
+        );
+
+        return save;
     }
 
     /**
@@ -75,71 +85,75 @@ public class OrderWriteService {
      * @param orderId
      * @return
      */
-    public Mono<Order> deleteOrder(ObjectId orderId) {
-        long userId = UserUtils.getUserId();
-        return orderReadService.findOrderById(orderId)
-                .flatMap(existingOrder -> {
-                            Tuple2<Integer, OrderShipmentParticle> shipmentParticle = existingOrder.findShipmentParticle(userId);
-                            if (shipmentParticle != null) {
-                                shipmentParticle = existingOrder.removeShipmentParticle(userId);
-                                OrderShipmentParticle particle = shipmentParticle._2;
+    public Order deleteOrder(ObjectId orderId) {
+        Order existingOrder = findOrderById(orderId);
+        Tuple2<Integer, OrderShipmentParticle> shipmentParticle = existingOrder.findShipmentParticle(UserUtils.getUserId());
 
-                                AtomicReference<Delay> delayRef = new AtomicReference<>(
-                                        Delay.builder()
-                                                .orderId(orderId)
-                                                .particleIndex(shipmentParticle._1)
-                                                .build());
+        if (shipmentParticle != null) {
+            shipmentParticle = existingOrder.removeShipmentParticle(UserUtils.getUserId());
+            OrderShipmentParticle particle = shipmentParticle._2;
 
-                                kafkaTemplate.send(KafkaTopic.AUCTION_RECREATION_EXPLICIT,
-                                        AuctionCreationRequest.recreationBuilder()
-                                                .path(PathFragment.builder()
-                                                        .from(particle.getFrom())
-                                                        .to(particle.getTo())
-                                                        .build())
-                                                //TODO decide how to calculate time
-                                                .bidsAcceptingTill(particle.getDeliveryTimeEstimated())
-                                                .itemId(existingOrder.getItemId())
-                                                .userId(existingOrder.getReceiverId())
-                                                .maximumRequiredBidPrice(particle.getPrice())
-                                                .build()
-                                ).whenComplete((c, t) -> {
-                                    if (t != null) {
-                                        log.error("Failed to send message: {}", t.getMessage());
-                                    } else {
-                                        RecordMetadata metadata = c.getRecordMetadata();
-                                        log.debug("Message sent successfully to topic {} partition {} offset {}",
-                                                metadata.topic(), metadata.partition(), metadata.offset());
-                                        delayService.save(delayRef.get()).subscribe();
-                                    }
-                                });
-                                return saveOrder(existingOrder)
-                                        .then(updateOrderStatus(existingOrder.getId(), OrderShipmentStatus.AWAITING));
-                            } else if (existingOrder.getReceiverId().equals(userId)) {
-                                // todo notify courier
-                                sendFanoutNotification(
-                                        "Status Updated",
-                                        "Order ID: "
-                                );
+            AtomicReference<Delay> delayRef = new AtomicReference<>(
+                    Delay.builder()
+                            .orderId(orderId)
+                            .particleIndex(shipmentParticle._1)
+                            .build());
 
-                                //todo calculate price
-                                kafkaTemplate.send(KafkaTopic.BILLING_CREATION, ItemBillingCreation.builder()
-                                        .itemId(existingOrder.getItemId())
-                                        .billingStrategy(BillingCreation.BillingStrategy.REFUND)
-                                        .build());
-                            }
-                            return Mono.empty();
-                        });
+            kafkaTemplate.send(KafkaTopic.AUCTION_RECREATION_EXPLICIT,
+                    AuctionCreationRequest.recreationBuilder()
+                            .path(PathFragment.builder()
+                                    .from(particle.getFrom())
+                                    .to(particle.getTo())
+                                    .build())
+                            //TODO decide how to calculate time
+                            .bidsAcceptingTill(particle.getDeliveryTimeEstimated())
+                            .itemId(existingOrder.getItemId())
+                            .userId(existingOrder.getReceiverId())
+                            .maximumRequiredBidPrice(particle.getPrice())
+                            .build()
+            ).whenComplete((c, t) -> {
+                if (t != null) {
+                    log.error("Failed to send message: {}", t.getMessage());
+                } else {
+                    RecordMetadata metadata = c.getRecordMetadata();
+                    log.debug("Message sent successfully to topic {} partition {} offset {}",
+                            metadata.topic(), metadata.partition(), metadata.offset());
+                    delayService.save(delayRef.get());
+                }
+            });
+            Order save = mongoTemplate.save(existingOrder);
+            updateOrderStatus(existingOrder.getId(), OrderShipmentStatus.AWAITING);
+
+            return save;
+        } else if (existingOrder.getReceiverId().equals(UserUtils.getUserId())) {
+            sendFanoutNotification(
+                    "Status Updated",
+                    "Order ID: "
+            );
+
+            //todo calculate price
+            kafkaTemplate.send(KafkaTopic.BILLING_CREATION, ItemBillingCreation.builder()
+                    .itemId(existingOrder.getItemId())
+                    .billingStrategy(BillingCreation.BillingStrategy.REFUND)
+                    .build());
+        }
+
+        return existingOrder;
     }
 
     //todo append to the _next particle, calculating the price or replace existing after submitted consent by both sides
-    public Flux<Order> assignCourier(Long courierId, Flux<String> orderIds) {
-        return orderIds.flatMap(orderReadService::findOrderById)
-                .flatMap(order -> saveOrder(applyCourierAssignment(order, courierId)));
+    public Order assignCourier(Long courierId, String orderId) {
+        if(ObjectId.isValid(orderId)) {
+            Order orderById = findOrderById(new ObjectId(orderId));
+            return mongoTemplate.save(applyCourierAssignment(orderById, courierId));
+        }
+        return null;
     }
 
-    private Mono<Order> saveOrder(Order order) {
-        return mongoTemplate.save(order);
+    public Order findOrderById(ObjectId orderId) {
+        return mongoTemplate.findById(orderId, Order.class);
     }
+
 
     private Order applyStatusUpdate(Order order, OrderShipmentStatus newStatus) {
         order.setStatus(newStatus);

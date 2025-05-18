@@ -3,6 +3,7 @@ package com.revify.monolith.items;
 import com.revify.monolith.commons.items.ItemCreationDTO;
 import com.revify.monolith.commons.items.ItemDTO;
 import com.revify.monolith.commons.items.ItemUpdatesDTO;
+import com.revify.monolith.items.model.item.Item;
 import com.revify.monolith.items.service.item.ItemReadService;
 import com.revify.monolith.items.service.item.ItemService;
 import com.revify.monolith.items.service.item.ItemWriteService;
@@ -12,11 +13,13 @@ import jakarta.ws.rs.core.MediaType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -34,19 +37,25 @@ public class ItemController {
     private final ItemService itemService;
 
     @PostMapping("/create")
-    public Mono<ItemDTO> createItem(@RequestBody ItemCreationDTO creationDTO) {
-        return itemWriteService.createItem(creationDTO)
-                .mapNotNull(ItemUtils::from);
+    public ResponseEntity<ItemDTO> createItem(@RequestBody ItemCreationDTO creationDTO) {
+        Item item = itemWriteService.createItem(creationDTO);
+        if(item != null) {
+            return ResponseEntity.ok(ItemDTO.from(item));
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
     }
 
     @PatchMapping("/change")
-    public Mono<ItemDTO> changeItem(@RequestBody ItemUpdatesDTO updates) {
-        return itemService.updateItem(updates)
-                .mapNotNull(ItemUtils::from);
+    public ResponseEntity<ItemDTO> changeItem(@RequestBody ItemUpdatesDTO updates) {
+        Item item = itemService.updateItem(updates);
+        if(item != null) {
+            return ResponseEntity.ok(ItemDTO.from(item));
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
     }
 
     @GetMapping("/{itemId}")
-    public Mono<ResponseEntity<ItemDTO>> getItem(@PathVariable ObjectId itemId) {
+    public ResponseEntity<ItemDTO> getItem(@PathVariable ObjectId itemId) {
         return itemReadService.findById(itemId)
                 .map(item -> ResponseEntity.ok(ItemUtils.from(item)))
                 .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()))
@@ -57,42 +66,45 @@ public class ItemController {
     }
 
     @PostMapping("/toggle-active")
-    public Mono<ItemDTO> toggleActiveStatus(@RequestParam ObjectId itemId, @RequestParam boolean active) {
-        return itemWriteService.deactivateItem(itemId, active)
-                .map(ItemUtils::from);
+    public ResponseEntity<ItemDTO> toggleActiveStatus(@RequestParam ObjectId itemId, @RequestParam boolean active) {
+        Item item = itemWriteService.deactivateItem(itemId, active);
+        if (item != null) {
+            return ResponseEntity.ok(ItemUtils.from(item));
+        }
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/fetch-paged")
-    public Flux<ItemDTO> fetchItemsPageForCurrentUser(@RequestParam(value = "limit", defaultValue = "10") Integer limit,
-                                        @RequestParam(value = "offset", defaultValue = "0") Integer offset) {
-        return itemReadService.findUserItems(offset, limit)
-                .mapNotNull(ItemUtils::from);
+    public ResponseEntity<List<ItemDTO>> fetchItemsPageForCurrentUser(@RequestParam(value = "limit", defaultValue = "10") Integer limit,
+                                                                      @RequestParam(value = "offset", defaultValue = "0") Integer offset) {
+        return ResponseEntity.ok(itemReadService.findUserItems(offset, limit)
+                .stream().map(ItemDTO::from).toList());
     }
 
     @GetMapping("/fetch-items-paged")
-    public Flux<ItemDTO> fetchItemsPage(@RequestParam(value = "limit", defaultValue = "10") Integer limit,
-                                        @RequestParam(value = "offset", defaultValue = "0") Integer offset) {
-        return itemReadService.findForUser(offset, limit)
-                .mapNotNull(ItemUtils::from);
+    public ResponseEntity<List<ItemDTO>> fetchItemsPage(@RequestParam(value = "limit", defaultValue = "10") Integer limit,
+                                                        @RequestParam(value = "offset", defaultValue = "0") Integer offset) {
+        return ResponseEntity.ok(itemReadService.findForUser(offset, limit)
+                .stream().map(ItemDTO::from).toList());
     }
 
     @GetMapping("/fetch-geo-paged")
-    public Flux<ItemDTO> fetchItemsPageWithGeolocation(
+    public ResponseEntity<List<ItemDTO>> fetchItemsPageWithGeolocation(
             @RequestParam("latitude") Double latitude,
             @RequestParam("longitude") Double longitude,
             @RequestParam(value = "distance", defaultValue = "1000", required = false) Double distance,
             @RequestParam(value = "limit", defaultValue = "10") Integer limit,
             @RequestParam(value = "offset", defaultValue = "0") Integer offset) {
-        return itemReadService.findForUserDestination(offset, limit, latitude, longitude, distance)
-                .mapNotNull(ItemUtils::from);
+        return ResponseEntity.ok(itemReadService.findForUserDestination(offset, limit, latitude, longitude, distance)
+                .stream().map(ItemDTO::from).toList());
     }
 
     @GetMapping("/count-for-location")
-    public Mono<Long> countForLocationBlockingUser(
+    public ResponseEntity<Long> countForLocationBlockingUser(
             @RequestParam("latitude") Double latitude,
             @RequestParam("longitude") Double longitude,
             @RequestParam(value = "distance", defaultValue = "1000", required = false) Double distance
     ) {
-        return itemReadService.countForLocationRemovingBlockedBy(latitude, longitude, distance);
+        return ResponseEntity.ok(itemReadService.countForLocationRemovingBlockedBy(latitude, longitude, distance));
     }
 }

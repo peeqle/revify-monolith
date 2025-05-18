@@ -17,17 +17,14 @@ public class ItemCompositeController {
 
     private final CompositeItemService compositeItemService;
 
-    /*
-    create composite formation request
-     */
-    @PostMapping("/create-from-item")
-    public Mono<CompositeItem> createCompositeItemInstance(@RequestParam("initialItem") String itemId) {
-        return compositeItemService.createCompositeInstance(itemId);
-    }
-
     @GetMapping
     public Mono<CompositeItem> fetchCompositeItemInstance(@RequestParam("compositeItemId") String compositeItemId) {
         return compositeItemService.findById(compositeItemId);
+    }
+
+    @PostMapping("/create-from-item")
+    public Mono<CompositeItem> createCompositeItemInstance(@RequestParam("initialItem") String itemId) {
+        return compositeItemService.createCompositeInstance(itemId);
     }
 
     @PatchMapping

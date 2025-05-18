@@ -6,6 +6,9 @@ import com.revify.monolith.commons.items.ItemDescriptionDTO;
 import com.revify.monolith.items.model.item.ItemDescription;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 
+import java.util.Comparator;
+import java.util.Objects;
+
 import static com.revify.monolith.items.model.util.ComparisonUtils.*;
 
 public class ItemChangesComparator {
@@ -19,9 +22,6 @@ public class ItemChangesComparator {
         if (result != 0) return result;
 
         result = compareNullableStrings(o1.getDescription(), o2.getDescription());
-        if (result != 0) return result;
-
-        result = compareNullableStrings(o1.getCategory(), o2.getCategory());
         if (result != 0) return result;
 
         result = compareNullableStrings(o1.getShopReference(), o2.getShopReference());
@@ -54,7 +54,7 @@ public class ItemChangesComparator {
             initial.setDescription(dto.getDescription());
         }
         if (dto.getCategory() != null) {
-            initial.setCategory(dto.getCategory());
+            initial.setCategories(dto.getCategory());
         }
         if (dto.getShopReference() != null) {
             initial.setShopReference(dto.getShopReference());
@@ -89,7 +89,20 @@ public class ItemChangesComparator {
         result = compareNullableStrings(o1.getDescription(), o2.getDescription());
         if (result != 0) return result;
 
-        result = compareNullableStrings(o1.getCategory(), o2.getCategory());
+        result = Objects.compare(
+                o1.getCategories(),
+                o2.getCategories(),
+                Comparator.nullsFirst(
+                        (l1, l2) -> {
+                            if (l1 == l2) return 0;
+                            for (int i = 0; i < Math.min(l1.size(), l2.size()); i++) {
+                                int cmp = CharSequence.compare(l1.get(i), l2.get(i));
+                                if (cmp != 0) return cmp;
+                            }
+                            return Integer.compare(l1.size(), l2.size());
+                        }
+                )
+        );
         if (result != 0) return result;
 
         result = compareNullableStrings(o1.getShopReference(), o2.getShopReference());

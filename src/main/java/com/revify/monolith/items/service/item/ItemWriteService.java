@@ -13,11 +13,11 @@ import com.revify.monolith.items.utils.ItemUtils;
 import com.revify.monolith.notifications.connector.producers.FanoutNotificationProducer;
 import lombok.RequiredArgsConstructor;
 import org.bson.types.ObjectId;
-import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Mono;
+import org.springframework.web.server.ResponseStatusException;
 
 import static com.revify.monolith.commons.messaging.KafkaTopic.*;
 
@@ -25,7 +25,7 @@ import static com.revify.monolith.commons.messaging.KafkaTopic.*;
 @RequiredArgsConstructor
 public class ItemWriteService {
 
-    private final ReactiveMongoTemplate mongoTemplate;
+    private final MongoTemplate mongoTemplate;
 
     private final FanoutNotificationProducer fanoutNotificationProducer;
 
@@ -33,75 +33,71 @@ public class ItemWriteService {
 
     private final Gson gson = new GsonBuilder().create();
 
-    public Mono<Item> createItem(ItemCreationDTO itemCreationDTO) {
-        long userId = UserUtils.getUserId();
+    public Item createItem(ItemCreationDTO itemCreationDTO) {
         Item newItem = ItemUtils.from(itemCreationDTO);
-        newItem.setCreatorId(userId);
+        newItem.setCreatorId(UserUtils.getUserId());
 
-        return mongoTemplate.save(newItem)
-                .doOnSuccess((x) ->
-                        kafkaTemplate.send(AUCTION_CREATION,
-                                gson.toJson(
-                                        AuctionCreationRequest.defaultBuilder()
-                                                .bidsAcceptingTill(x.getValidUntil())
-                                                .itemId(x.getId().toHexString())
-                                                .userId(userId)
-                                                .maximumRequiredBidPrice(x.getItemDescription().getMaximumRequiredBidPrice())
-                                                .build()
-                                )
-                        )
+        newItem = mongoTemplate.save(newItem);
+        if (newItem.getId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item creation failed");
+        }
+        kafkaTemplate.send(AUCTION_CREATION,
+                gson.toJson(
+                        AuctionCreationRequest.defaultBuilder()
+                                .bidsAcceptingTill(newItem.getValidUntil())
+                                .itemId(newItem.getId().toHexString())
+                                .userId(UserUtils.getUserId())
+                                .maximumRequiredBidPrice(newItem.getItemDescription().getMaximumRequiredBidPrice())
+                                .build()
                 )
-                .doOnSuccess((x) ->
-                        {
-                            if (!x.getReferenceUrl().isEmpty()) {
-                                kafkaTemplate.send(ITEM_PROCESSING_MODEL,
-                                        gson.toJson(
-                                                ItemProcessing.builder()
-                                                        .itemUrl(x.getReferenceUrl())
-                                                        .itemId(x.getId().toHexString())
-                                                        .build()
-                                        )
-                                );
-                            }
-                        }
-                )
-                .doOnSuccess((x) ->
-                        fanoutNotificationProducer.sendFanout(FanoutMessageBody.builder()
-                                .title("Created new item")
-                                .body("Notification from item creation")
-                                .build())
-                )
-                .doOnSuccess((x) ->
-                        fanoutNotificationProducer.sendFanout(FanoutMessageBody.builder()
-                                .title("Created new item")
-                                .body("Notification from item creation")
-                                .build())
-                );
+        );
+
+
+        if (!newItem.getReferenceUrl().isEmpty()) {
+            kafkaTemplate.send(ITEM_PROCESSING_MODEL,
+                    gson.toJson(
+                            ItemProcessing.builder()
+                                    .itemUrl(newItem.getReferenceUrl())
+                                    .itemId(newItem.getId().toHexString())
+                                    .build()
+                    )
+            );
+        }
+        fanoutNotificationProducer.sendFanout(FanoutMessageBody.builder()
+                .title("Created new item")
+                .body("Notification from item creation")
+                .build());
+        fanoutNotificationProducer.sendFanout(FanoutMessageBody.builder()
+                .title("Created new item")
+                .body("Notification from item creation")
+                .build());
+
+        return newItem;
     }
 
-    public Mono<Item> deactivateItem(ObjectId itemId, Boolean active) {
-        return mongoTemplate.findById(itemId, Item.class)
-                .flatMap(existing -> {
-                    if (!existing.getCreatorId().equals(UserUtils.getUserId())) {
-                        return Mono.error(new AccessDeniedException("You are not allowed to deactivate this item"));
-                    }
-                    existing.setActive(active);
-                    existing.setManuallyToggled(true);
+    public Item deactivateItem(ObjectId itemId, Boolean active) {
+        Item item = mongoTemplate.findById(itemId, Item.class);
+        if (item == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not found");
+        }
+        if (!item.getCreatorId().equals(UserUtils.getUserId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot modify this item");
+        }
 
-                    return mongoTemplate.save(existing);
-                })
-                .doOnSuccess((x) ->
-                        kafkaTemplate.send(AUCTION_DEACTIVATION,
-                                gson.toJson(
-                                        AuctionToggleRequest.builder()
-                                                .manuallyToggled(true)
-                                                .status(active)
-                                                .itemId(x.getId().toHexString())
-                                                .build()
-                                )
-                        )
-                );
+        item.setActive(active);
+        item.setManuallyToggled(true);
 
-        //send notification to users subscribed
+        item = mongoTemplate.save(item);
+        kafkaTemplate.send(AUCTION_DEACTIVATION,
+                gson.toJson(
+                        AuctionToggleRequest.builder()
+                                .manuallyToggled(true)
+                                .status(active)
+                                .itemId(item.getId().toHexString())
+                                .build()
+                )
+        );
+
+        return item;
     }
 }

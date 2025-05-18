@@ -3,17 +3,16 @@ package com.revify.monolith.orders.controller;
 import com.revify.monolith.commons.models.orders.OrderCreationDTO;
 import com.revify.monolith.commons.models.orders.OrderDTO;
 import com.revify.monolith.commons.models.orders.OrderStatusUpdateRequest;
-import com.revify.monolith.orders.service.OrderReadService;
-import com.revify.monolith.orders.service.OrderWriteService;
+import com.revify.monolith.orders.models.Order;
+import com.revify.monolith.orders.service.OrderService;
 import com.revify.monolith.orders.util.OrderMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.bson.types.ObjectId;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Mono;
-
-import static com.revify.monolith.orders.util.OrderRequestValidation.validateOrderId;
 
 @Slf4j
 @RestController
@@ -22,38 +21,41 @@ import static com.revify.monolith.orders.util.OrderRequestValidation.validateOrd
 @PreAuthorize("hasRole('ROLE_USER')")
 public class OrderController {
 
-    private final OrderWriteService orderWriteService;
-
-    private final OrderReadService orderReadService;
+    private final OrderService orderService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Mono<OrderDTO> createOrder(@RequestBody OrderCreationDTO orderCreationDTO) {
+    public ResponseEntity<OrderDTO> createOrder(@RequestBody OrderCreationDTO orderCreationDTO) {
         log.debug("Caught request to create order.");
 
-        return orderWriteService.createOrder(orderCreationDTO)
-                .mapNotNull(OrderMapper::from);
+        Order order = orderService.createOrder(orderCreationDTO);
+        if (order == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(OrderMapper.from(order));
     }
 
     @PatchMapping("{orderId}")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public Mono<OrderDTO> updateOrderStatus(@RequestBody OrderStatusUpdateRequest request) {
+    public ResponseEntity<OrderDTO> updateOrderStatus(@RequestBody OrderStatusUpdateRequest request) {
         log.debug("Caught request to update order status. Order ID: {}", request.orderId());
 
-        return validateOrderId(request.orderId())
-                .then(orderWriteService.updateOrderStatus(request)
-                        .mapNotNull(OrderMapper::from))
-                .onErrorResume(e -> Mono.error(new RuntimeException("Failed to update order status: " + e.getMessage(), e)));
+        if (ObjectId.isValid(request.orderId())) {
+            orderService.updateOrderStatus(request);
+        }
+        return ResponseEntity.badRequest().build();
     }
 
     @GetMapping("{orderId}")
     @ResponseStatus(HttpStatus.FOUND)
-    public Mono<OrderDTO> getOrderById(@PathVariable String orderId) {
+    public ResponseEntity<OrderDTO> getOrderById(@PathVariable String orderId) {
         log.debug("Caught request to get order by id. Order ID: {}", orderId);
 
-        return validateOrderId(orderId)
-                .then(orderReadService.findOrderById(orderId).mapNotNull(OrderMapper::from))
-                .onErrorResume(e -> Mono.error(new RuntimeException("Failed fetching order: " + e.getMessage(), e)));
+        if (ObjectId.isValid(orderId)) {
+            Order orderById = orderService.findOrderById(new ObjectId(orderId));
+            return ResponseEntity.ok(OrderMapper.from(orderById));
+        }
+        return ResponseEntity.notFound().build();
     }
 
     /**
@@ -61,11 +63,12 @@ public class OrderController {
      * after close obv select the minimum price from auction if is, otherwise make auction enabled again
      */
     @DeleteMapping("{orderId}")
-    public Mono<OrderDTO> deleteOrderById(@PathVariable String orderId) {
+    public ResponseEntity<OrderDTO> deleteOrderById(@PathVariable String orderId) {
         log.debug("Caught request to delete order by id. Order ID: {}", orderId);
-        return validateOrderId(orderId)
-                .flatMap(x -> orderWriteService.deleteOrder(x).mapNotNull(OrderMapper::from))
-                .onErrorResume(e -> Mono.error(new RuntimeException("Failed fetching order: %s"
-                        .formatted(e.getMessage()), e)));
+        if (ObjectId.isValid(orderId)) {
+            Order order = orderService.deleteOrder(new ObjectId(orderId));
+            return ResponseEntity.ok(OrderMapper.from(order));
+        }
+        return ResponseEntity.notFound().build();
     }
 }

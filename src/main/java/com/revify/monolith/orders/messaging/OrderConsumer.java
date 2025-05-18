@@ -7,20 +7,19 @@ import com.revify.monolith.commons.messaging.KafkaTopic;
 import com.revify.monolith.commons.models.orders.OrderCreationDTO;
 import com.revify.monolith.commons.models.orders.OrderStatusUpdateRequest;
 import com.revify.monolith.orders.models.Order;
-import com.revify.monolith.orders.service.OrderWriteService;
+import com.revify.monolith.orders.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class OrderConsumer {
 
-    private final OrderWriteService orderWriteService;
+    private final OrderService orderService;
     private final Gson gson = new GsonBuilder().create();
 
     @KafkaListener(topics = KafkaTopic.ORDER_MODEL_CREATION, groupId = ConsumerGroups.ORDERS)
@@ -29,7 +28,7 @@ public class OrderConsumer {
         processMessage(
                 message,
                 OrderCreationDTO.class,
-                orderWriteService::createOrder,
+                orderService::createOrder,
                 "Order created successfully"
         );
     }
@@ -40,7 +39,7 @@ public class OrderConsumer {
         processMessage(
                 message,
                 OrderStatusUpdateRequest.class,
-                orderWriteService::updateOrderStatus,
+                orderService::updateOrderStatus,
                 "Order status updated successfully"
         );
     }
@@ -48,12 +47,8 @@ public class OrderConsumer {
     private <T> void processMessage(String message, Class<T> dtoClass, MessageProcessor<T> processor, String successMessage) {
         try {
             T dto = gson.fromJson(message, dtoClass);
-            processor.process(dto)
-                    .subscribe(
-                            order -> log.info("{}: {}", successMessage, order.getId()),
-                            ex -> log.error("Failed to process message", ex),
-                            () -> log.info("Processing completed for {}", dto.getClass().getSimpleName())
-                    );
+            processor.process(dto);
+            log.debug(successMessage);
         } catch (Exception e) {
             log.error("Error processing message: {}", message, e);
         }
@@ -65,6 +60,6 @@ public class OrderConsumer {
 
     @FunctionalInterface
     private interface MessageProcessor<T> {
-        Mono<Order> process(T dto);
+        Order process(T dto);
     }
 }
