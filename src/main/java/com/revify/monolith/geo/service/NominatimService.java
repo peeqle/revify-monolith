@@ -5,42 +5,40 @@ import com.google.gson.GsonBuilder;
 import com.revify.monolith.geo.model.Place;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
-import reactor.util.retry.Retry;
+import org.springframework.web.client.RestTemplate;
 
-import java.time.Duration;
 import java.util.concurrent.Semaphore;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-
-/**
- * Geolocation OpenStreetMap API eating service
- */
 public class NominatimService {
+
+    private static final String NOMINATIM_MAP_API = "https://nominatim.openstreetmap.org";
 
     private static final String REVERSE_PATH = "/reverse";
 
-    private static final Semaphore sema = new Semaphore(5);
+    private final RestTemplate restTemplate;
 
-    @Autowired
-    @Qualifier("nominatimWebClient")
-    private WebClient webClient;
+    private static final Semaphore sema = new Semaphore(5);
 
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
-    public Mono<Place> readGeolocationAddress(Double latitude, Double longitude) {
+    //todo read and propose address for input
+    public Place readGeolocationAddress(Double latitude, Double longitude) {
         String finalPath = REVERSE_PATH + accelerateParticles(
                 DefaultParticle.jsonFormatting()
                         .setNext(DefaultParticle.coordinates(latitude, longitude))
         );
 
-        return request(finalPath).map(response -> gson.fromJson(response, Place.class));
+        String response = request(finalPath);
+        if (response != null) {
+            return gson.fromJson(response, Place.class);
+        }
+
+        throw new RuntimeException(String.format("Cannot fetch location for %s, %s", latitude, longitude));
     }
 
     /**
@@ -49,17 +47,24 @@ public class NominatimService {
      * @param path
      * @return
      */
-    private Mono<String> request(String path) {
+    private String request(String path) {
         log.info("Searching for {}", path);
-        return Mono.fromCallable(sema::tryAcquire)
-                .delayElement(Duration.ofSeconds(1))
-                .flatMap(i ->
-                        webClient.get()
-                                .uri(path)
-                                .retrieve()
-                                .bodyToMono(String.class)
-                                .retryWhen(Retry.fixedDelay(3, Duration.ofSeconds(2))))
-                .doFinally(s -> sema.release());
+        try {
+            sema.acquire();
+            ResponseEntity<String> response = restTemplate.getForEntity(
+                    NOMINATIM_MAP_API + path,
+                    String.class
+            );
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                return response.getBody();
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } finally {
+            sema.release();
+        }
+        return null;
     }
 
     private interface SearchParticle<T> extends Particle {

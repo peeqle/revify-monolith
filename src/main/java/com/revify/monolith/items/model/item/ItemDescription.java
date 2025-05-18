@@ -7,7 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
+import java.util.Set;
 
 @Data
 @Builder
@@ -17,7 +17,7 @@ public class ItemDescription {
     private String title;
     private String description;
 
-    private List<String> categories;
+    private Set<String> categories;
     private String shopReference;
     private String url;
 

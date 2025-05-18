@@ -2,12 +2,12 @@ package com.revify.monolith.items.service.composite;
 
 import com.revify.monolith.commons.auth.sync.UserUtils;
 import com.revify.monolith.commons.messaging.dto.TopicMessageBody;
+import com.revify.monolith.items.model.item.Item;
 import com.revify.monolith.items.model.item.composite.CompositeItem;
 import com.revify.monolith.items.service.item.ItemReadService;
 import com.revify.monolith.notifications.connector.producers.TopicNotificationProducer;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -25,98 +25,82 @@ import static com.revify.monolith.items.utils.CompositeItemCriteriaUtil.*;
 
 
 @Service
+@RequiredArgsConstructor
 public class CompositeItemService {
 
     private final TopicNotificationProducer topicNotificationProducer;
 
-    private final ReactiveMongoTemplate mongoTemplate;
+    private final MongoTemplate mongoTemplate;
 
     private final ItemReadService itemReadService;
-
-    @Autowired
-    public CompositeItemService(TopicNotificationProducer topicNotificationProducer,
-                                ReactiveMongoTemplate mongoTemplate, ItemReadService itemReadService) {
-        this.topicNotificationProducer = topicNotificationProducer;
-        this.mongoTemplate = mongoTemplate;
-        this.itemReadService = itemReadService;
-    }
 
     /*
     try to create composite item for item instance and notify all people having same destination items
         about composition excluding sender on client
      */
-    public Mono<CompositeItem> createCompositeInstance(String initialItemId) {
-        return itemReadService.findById(initialItemId)
-                .flatMap(initialItem -> {
-                    if (!initialItem.isActive()) {
-                        return Mono.error(new RuntimeException("Item is not active"));
-                    }
+    public CompositeItem createCompositeInstance(String initialItemId) {
+        Item initialItem = itemReadService.findById(initialItemId);
+        if (!initialItem.isActive()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item is deactivated");
+        }
+        Boolean itemExists = compositeForItemExists(initialItemId);
 
-                    //check if composite for item exist
-                    return compositeForItemExists(initialItemId)
-                            .onErrorMap(RuntimeException.class, ex -> new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex))
-                            .flatMap(exists -> {
-                                if (!exists) {
-                                    long userId = UserUtils.getUserId();
-                                    CompositeItem compositeItem = new CompositeItem();
-                                    compositeItem.setActive(true);
-                                    compositeItem.setCreatorId(userId);
-                                    compositeItem.setInitialItemId(initialItemId);
-                                    compositeItem.setAvailableForAppendix(true);
-                                    compositeItem.setItemsInvolved(Set.of(initialItemId));
-                                    compositeItem.setItemsCategories(Set.of(initialItem.getItemDescription().getCategory()));
-                                    compositeItem.setDestination(initialItem.getItemDescription().getDestination());
+        CompositeItem compositeItem = new CompositeItem();
+        if (!itemExists) {
+            compositeItem.setActive(true);
+            compositeItem.setCreatorId(UserUtils.getUserId());
+            compositeItem.setInitialItemId(initialItemId);
+            compositeItem.setAvailableForAppendix(true);
+            compositeItem.setItemsInvolved(Set.of(initialItemId));
+            compositeItem.setItemsCategories(initialItem.getItemDescription().getCategories());
+            compositeItem.setDestination(initialItem.getItemDescription().getDestination());
+        } else {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Composite item already exists");
+        }
+        compositeItem = mongoTemplate.save(compositeItem);
 
-                                    return Mono.just(compositeItem);
-                                }
-                                return Mono.error(new RuntimeException("Composite item already exists"));
-                            })
-                            .flatMap(mongoTemplate::save)
-                            .flatMap(saved -> {
-                                TopicMessageBody topicMessageBody = new TopicMessageBody();
-                                topicMessageBody.setSenderId(saved.getCreatorId());
-                                topicMessageBody.setBody("New composite item created NIGGA");
-                                topicMessageBody.setTitle("COMPOSITE ITEM");
+        TopicMessageBody topicMessageBody = new TopicMessageBody();
+        topicMessageBody.setSenderId(compositeItem.getCreatorId());
+        topicMessageBody.setBody("New composite item created");
+        topicMessageBody.setTitle("COMPOSITE ITEM");
 
-                                //send notification to couriers waiting for item
-                                topicNotificationProducer
-                                        .sendCompositeNotification(
-                                                topicMessageBody,
-                                                initialItem.getItemDescription().getDestination().getCountryCode(),
-                                                initialItem.getItemDescription().getDestination().getPlaceName()
-                                        );
-                                return Mono.just(saved);
-                            });
-                });
+        //send notification to couriers waiting for item
+        topicNotificationProducer
+                .sendCompositeNotification(
+                        topicMessageBody,
+                        initialItem.getItemDescription().getDestination().getCountryCode(),
+                        initialItem.getItemDescription().getDestination().getPlaceName()
+                );
+
+
+        return compositeItem;
     }
 
-    public Mono<CompositeItem> updateCompositeItem(String compositeItemId, Map<String, Object> updates) {
-        return findById(compositeItemId)
-                .flatMap(compositeItem -> {
-                    if (compositeItem == null) return Mono.error(new RuntimeException("Cannot find composite item"));
-                    for (Map.Entry<String, Object> entry : updates.entrySet()) {
-                        applyUpdate(compositeItem, entry.getKey(), entry.getValue());
-                    }
+    public CompositeItem updateCompositeItem(String compositeItemId, Map<String, Object> updates) {
+        CompositeItem byId = findById(compositeItemId);
 
-                    return mongoTemplate.save(compositeItem);
-                });
+        if (byId == null) return Mono.error(new RuntimeException("Cannot find composite item"));
+        for (Map.Entry<String, Object> entry : updates.entrySet()) {
+            applyUpdate(compositeItem, entry.getKey(), entry.getValue());
+        }
+
+        return mongoTemplate.save(byId);
     }
 
-    public Mono<Boolean> deleteCompositeInstance(String compositeItemId) {
+    public Boolean deleteCompositeInstance(String compositeItemId) {
         Query query = Query.query(hasCompositeItemId(compositeItemId));
 
-        return mongoTemplate.remove(query, CompositeItem.class)
-                .map(e -> e.getDeletedCount() > 0);
+        return mongoTemplate.remove(query, CompositeItem.class).getDeletedCount() > 0;
     }
 
-    public Mono<CompositeItem> findById(String compositeItemId) {
+    public CompositeItem findById(String compositeItemId) {
         Query query = Query.query(activeCriteria())
                 .addCriteria(hasCompositeItemId(compositeItemId));
 
         return mongoTemplate.findOne(query, CompositeItem.class);
     }
 
-    public Mono<Boolean> compositeForItemExists(String initialItemId) {
+    public Boolean compositeForItemExists(String initialItemId) {
         Query query = Query.query(findForInitialItem(initialItemId))
                 .addCriteria(activeCriteria());
         return mongoTemplate.exists(query, CompositeItem.class);
