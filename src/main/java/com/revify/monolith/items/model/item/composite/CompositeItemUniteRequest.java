@@ -6,7 +6,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Data
-@Document(value = "composition_request")
+@Document(value = "composite_item_unite_request")
 public class CompositeItemUniteRequest {
     @Id
     private ObjectId id;

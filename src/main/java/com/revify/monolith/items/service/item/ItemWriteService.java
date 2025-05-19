@@ -10,6 +10,7 @@ import com.revify.monolith.commons.models.bid.AuctionCreationRequest;
 import com.revify.monolith.commons.models.bid.AuctionToggleRequest;
 import com.revify.monolith.commons.models.item.ItemProcessing;
 import com.revify.monolith.items.model.item.Item;
+import com.revify.monolith.items.service.composite.CompositeItemService;
 import com.revify.monolith.items.utils.ItemUtils;
 import com.revify.monolith.notifications.connector.producers.FanoutNotificationProducer;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +21,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import static com.revify.monolith.commons.messaging.KafkaTopic.*;
+import static com.revify.monolith.commons.messaging.KafkaTopic.ITEM_PROCESSING_MODEL;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +30,8 @@ public class ItemWriteService {
     private final MongoTemplate mongoTemplate;
 
     private final AuctionService auctionService;
+
+    private final CompositeItemService compositeItemService;
 
     private final FanoutNotificationProducer fanoutNotificationProducer;
 
@@ -53,6 +56,11 @@ public class ItemWriteService {
                     .userId(UserUtils.getUserId())
                     .maximumRequiredBidPrice(newItem.getItemDescription().getMaximumRequiredBidPrice())
                     .build());
+        }
+
+        //create composite item
+        if (newItem.getItemDescription().getCompositeStackingEnabled()) {
+            compositeItemService.createCompositeInstance(newItem.getId().toHexString());
         }
 
         //send item for deeper processing

@@ -3,6 +3,7 @@ package com.revify.monolith.config.data;
 import com.revify.monolith.geo.model.UserGeolocation;
 import com.revify.monolith.items.model.item.Item;
 import com.revify.monolith.items.model.item.composite.CompositeItem;
+import com.revify.monolith.notifications.models.Notification;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.event.ApplicationReadyEvent;

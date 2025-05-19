@@ -41,6 +41,13 @@ public class AppUser {
 
     private UserRole clientUserRole = UserRole.CLIENT;
 
+    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(
+            name = "user_friends",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "friend_id")
+    )
+    private Set<AppUser> friends = new HashSet<>();
     //consider migration to neo4j
     @OneToMany
     private Set<AppUser> favourite = new HashSet<>();
@@ -95,6 +102,16 @@ public class AppUser {
 
     public String getCommonUserName() {
         return this.getFirstName() + " " + this.getLastName();
+    }
+
+    public void addFriend(AppUser friend) {
+        this.friends.add(friend);
+        friend.getFriends().add(this);
+    }
+
+    public void removeFriend(AppUser friend) {
+        this.friends.remove(friend);
+        friend.getFriends().remove(this);
     }
 }
 

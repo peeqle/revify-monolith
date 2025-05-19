@@ -16,6 +16,7 @@ public class CompositeItem {
     private ObjectId id;
 
     private Long creatorId;
+    private Set<Long> usersConnected = new HashSet<>();
     private String initialItemId;
 
     //try not to aggregate on coords when composing
@@ -24,6 +25,11 @@ public class CompositeItem {
     private Set<String> itemsInvolved = new HashSet<>();
     private Set<String> itemsCategories = new HashSet<>();
 
-    private Boolean availableForAppendix = true;
-    private Boolean active = true;
+    private Boolean isAvailableForAppend = true;
+    private Boolean isActive = true;
+
+    public CompositeItem addUserConnected(Long userId) {
+        usersConnected.add(userId);
+        return this;
+    }
 }

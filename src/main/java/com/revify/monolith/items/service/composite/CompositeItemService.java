@@ -8,6 +8,7 @@ import com.revify.monolith.items.service.item.ItemReadService;
 import com.revify.monolith.notifications.connector.producers.TopicNotificationProducer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -41,20 +42,8 @@ public class CompositeItemService {
         if (!initialItem.isActive()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item is deactivated");
         }
-        Boolean itemExists = compositeForItemExists(initialItemId);
 
-        CompositeItem compositeItem = new CompositeItem();
-        if (!itemExists) {
-            compositeItem.setActive(true);
-            compositeItem.setCreatorId(UserUtils.getUserId());
-            compositeItem.setInitialItemId(initialItemId);
-            compositeItem.setAvailableForAppendix(true);
-            compositeItem.setItemsInvolved(Set.of(initialItemId));
-            compositeItem.setItemsCategories(initialItem.getItemDescription().getCategories());
-            compositeItem.setDestination(initialItem.getItemDescription().getDestination());
-        } else {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Composite item already exists");
-        }
+        CompositeItem compositeItem = getCompositeItem(initialItem);
         compositeItem = mongoTemplate.save(compositeItem);
 
         TopicMessageBody topicMessageBody = new TopicMessageBody();
@@ -85,6 +74,13 @@ public class CompositeItemService {
         return mongoTemplate.save(compositeItem);
     }
 
+    public CompositeItem findForItem(String itemId) {
+        Query query = Query.query(Criteria.where("initialItemId").is(itemId)
+                .and("isActive").is(true));
+
+        return mongoTemplate.findOne(query, CompositeItem.class);
+    }
+
     public Boolean deleteCompositeInstance(String compositeItemId) {
         Query query = Query.query(hasCompositeItemId(compositeItemId));
 
@@ -106,7 +102,7 @@ public class CompositeItemService {
 
     private void applyUpdate(CompositeItem item, String key, Object value) {
         switch (key) {
-            case "availableForAppendix" -> item.setAvailableForAppendix(Boolean.parseBoolean(value.toString()));
+            case "availableForAppendix" -> item.setIsAvailableForAppend(Boolean.parseBoolean(value.toString()));
             case "itemsInvolved" -> {
                 if (value instanceof List<?> list) {
                     item.setItemsInvolved(new HashSet<>(list.stream()
@@ -123,5 +119,22 @@ public class CompositeItemService {
             }
             default -> throw new IllegalArgumentException("Invalid field: " + key);
         }
+    }
+
+    private CompositeItem getCompositeItem(Item initialItem) {
+        Boolean itemExists = compositeForItemExists(initialItem.getId().toHexString());
+        CompositeItem compositeItem = new CompositeItem();
+        if (!itemExists) {
+            compositeItem.setIsActive(true);
+            compositeItem.setCreatorId(UserUtils.getUserId());
+            compositeItem.setInitialItemId(initialItem.getId().toHexString());
+            compositeItem.setIsAvailableForAppend(true);
+            compositeItem.setItemsInvolved(Set.of(initialItem.getId().toHexString()));
+            compositeItem.setItemsCategories(initialItem.getItemDescription().getCategories());
+            compositeItem.setDestination(initialItem.getItemDescription().getDestination());
+        } else {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Composite item already exists");
+        }
+        return compositeItem;
     }
 }
