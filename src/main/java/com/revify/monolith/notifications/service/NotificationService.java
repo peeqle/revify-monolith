@@ -2,6 +2,7 @@ package com.revify.monolith.notifications.service;
 
 import com.revify.monolith.commons.auth.sync.UserUtils;
 import com.revify.monolith.notifications.models.Notification;
+import com.vonage.client.meetings.UISettings;
 import lombok.RequiredArgsConstructor;
 import org.bson.types.ObjectId;
 import org.springframework.data.domain.Sort;
@@ -12,6 +13,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,10 +43,23 @@ public class NotificationService {
     }
 
     public void deleteNotifications(List<String> notificationIds) {
-        Query query = Query.query(
-                Criteria.where("_id").in(notificationIds.stream().filter(x -> !ObjectId.isValid(x))
-                        .map(ObjectId::new).collect(Collectors.toSet()))
-        );
-        mongoTemplate.remove(query, Notification.class);
+        long currentUserId = UserUtils.getUserId();
+        for (String notificationId : notificationIds) {
+            Notification notification = mongoTemplate.findById(notificationId, Notification.class);
+            if (notification == null) {
+                continue;
+            }
+            Set<Long> relatedUsers = notification.getRelatedUsers();
+            if (relatedUsers != null) {
+                relatedUsers.removeIf(x -> x == currentUserId);
+            }
+
+            if ( relatedUsers == null || relatedUsers.isEmpty()) {
+                mongoTemplate.remove(notification);
+            }else {
+                notification.setRelatedUsers(relatedUsers);
+                mongoTemplate.save(notification);
+            }
+        }
     }
 }
