@@ -36,6 +36,12 @@ public class ItemReadService {
         return mongoTemplate.findById(id, Item.class);
     }
 
+    public List<Item> findForIds(List<ObjectId> ids) {
+        Query query = Query.query(Criteria.where("_id").in(ids)
+                .and("isActive").is(true));
+        return mongoTemplate.find(query, Item.class);
+    }
+
     public Item findByIdAndUser(ObjectId id, Long userId) {
         Query query = Query.query(Criteria.where("_id").is(id).and("creatorId").is(userId))
                 .maxTime(Duration.ofMillis(3000));

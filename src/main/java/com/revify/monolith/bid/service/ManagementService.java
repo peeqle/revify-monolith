@@ -96,6 +96,9 @@ public class ManagementService {
         if (auction == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found for item: " + bidCreationRequest.getItemId());
         }
+        if(auction.getCreatorId() == UserUtils.getUserId()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot place a bid to your item");
+        }
         Bid newBid = Bid.builder()
                 .auctionId(auction.getId())
                 .bidPrice(bidCreationRequest.getPrice())

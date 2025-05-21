@@ -110,7 +110,7 @@ public class KeycloakAuthService {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
-            throw new RuntimeException("Failed to refresh token");
+            throw new RuntimeException("Failed to refresh token:\n" +  response.body());
         }
 
         return gson.fromJson(response.body(), TokenResponse.class);

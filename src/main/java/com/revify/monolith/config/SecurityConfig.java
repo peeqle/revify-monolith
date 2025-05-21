@@ -55,14 +55,14 @@ public class SecurityConfig {
         return httpSecurity.build();
     }
 
-    @Bean
-    public AuthorizationManager<Message<?>> messageAuthorizationManager(MessageMatcherDelegatingAuthorizationManager.Builder messages) {
-        messages
-                .simpDestMatchers("/user/**", "/item/**", "/bid/**").hasRole("USER")
-                .simpDestMatchers("/admin/**").hasRole("ADMIN")
-                .anyMessage().denyAll();
-        return messages.build();
-    }
+//    @Bean
+//    public AuthorizationManager<Message<?>> messageAuthorizationManager(MessageMatcherDelegatingAuthorizationManager.Builder messages) {
+//        messages
+//                .simpDestMatchers("/user/**", "/item/**", "/bid/**").hasRole("USER")
+//                .simpDestMatchers("/admin/**").hasRole("ADMIN")
+//                .anyMessage().denyAll();
+//        return messages.build();
+//    }
 
     @Bean
     CorsConfigurationSource corsConfigurationSource() {

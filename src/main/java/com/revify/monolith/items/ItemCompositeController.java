@@ -18,6 +18,15 @@ public class ItemCompositeController {
 
     private final CompositeItemService compositeItemService;
 
+    @GetMapping("/for-item")
+    public ResponseEntity<CompositeItem> fetchCompositeItemInstanceForItem(@RequestParam("itemId") String itemId) {
+        CompositeItem compositeItem = compositeItemService.findForItem(itemId);
+        if (compositeItem == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(compositeItem);
+    }
+
     @GetMapping
     public ResponseEntity<CompositeItem> fetchCompositeItemInstance(@RequestParam("compositeItemId") String compositeItemId) {
         CompositeItem compositeItem = compositeItemService.findById(compositeItemId);

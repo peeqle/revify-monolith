@@ -62,6 +62,15 @@ public class ItemController {
         return ResponseEntity.notFound().build();
     }
 
+    @GetMapping("/many")
+    public ResponseEntity<List<ItemDTO>> getItems(@RequestBody List<ObjectId> itemIds) {
+        List<Item> byId = itemReadService.findForIds(itemIds);
+        if (byId != null && !byId.isEmpty()) {
+            return ResponseEntity.ok(byId.stream().map(ItemDTO::from).toList());
+        }
+        return ResponseEntity.notFound().build();
+    }
+
     @PostMapping("/toggle-active")
     public ResponseEntity<ItemDTO> toggleActiveStatus(@RequestParam ObjectId itemId, @RequestParam boolean active) {
         Item item = itemWriteService.deactivateItem(itemId, active);
