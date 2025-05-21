@@ -53,7 +53,7 @@ public class ItemUtils {
         ItemDescriptionDTO.Destination itemDestination = itemCreation.description().getDestination();
 //        destination.setCountryCode(itemDestination.getCountryCode());
 //        destination.setPlaceName(itemDestination.getPlaceName());
-
+        destination.setDisplayName(itemDestination.getAddress());
         destination.setLocation(new GeoJsonPoint(itemDestination.getLongitude(), itemDestination.getLatitude()));
 
         item.setActive(true);

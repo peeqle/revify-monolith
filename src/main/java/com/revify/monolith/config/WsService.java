@@ -2,9 +2,7 @@ package com.revify.monolith.config;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.core.Queue;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
@@ -19,12 +17,7 @@ public class WsService {
     public static final String BID_QUEUE_PREFIX = "item-messages-queue-";
 
     public void sendBidCreated(String itemId, String bidId) {
-        rabbitTemplate.convertAndSend("/topic/item/" + itemId + "/bid/" + bidId, 1);
-    }
-
-    @RabbitListener(queues = "#{@itemQueue('${item.id}')}")
-    public void receiveItemMessage(String message, @Header("itemId") String itemId, @Header("bidId") String bidId) {
-        messagingTemplate.convertAndSend("/topic/bids/" + itemId, message);
+        messagingTemplate.convertAndSend("/topic/item/" + itemId + "/bid/" + bidId, 1);
     }
 
     public Queue bidCreationQueue(String itemId, String bidId) {

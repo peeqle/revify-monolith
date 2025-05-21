@@ -52,12 +52,12 @@ public class CompositeItemService {
         topicMessageBody.setTitle("COMPOSITE ITEM");
 
         //send notification to couriers waiting for item
-        topicNotificationProducer
-                .sendCompositeNotification(
-                        topicMessageBody,
-                        initialItem.getItemDescription().getDestination().getCountryCode(),
-                        initialItem.getItemDescription().getDestination().getPlaceName()
-                );
+//        topicNotificationProducer
+//                .sendCompositeNotification(
+//                        topicMessageBody,
+//                        initialItem.getItemDescription().getDestination().getCountryCode(),
+//                        initialItem.getItemDescription().getDestination().getPlaceName()
+//                );
 
 
         return compositeItem;

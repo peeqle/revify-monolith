@@ -106,5 +106,9 @@
     }
   ],
   "global_parameters": [],
-  "topic_permissions": []
+  "topic_permissions": [],
+  "plugins": [
+    "rabbitmq_management",
+    "rabbitmq_stomp"
+  ]
 }
