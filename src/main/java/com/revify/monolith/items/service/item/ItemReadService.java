@@ -72,6 +72,7 @@ public class ItemReadService {
 
         Query query = new Query()
                 .addCriteria(filterByGeolocation(latitude, longitude, distance))
+                .addCriteria(Criteria.where("isPicked").is(false))
                 .addCriteria(criteria)
                 .skip((long) offset * limit)
                 .limit(limit);
@@ -83,6 +84,7 @@ public class ItemReadService {
 
         Query query = new Query()
                 .addCriteria(filterByGeolocation(latitude, longitude, distance))
+                .addCriteria(Criteria.where("isPicked").is(false))
                 .addCriteria(criteria);
         return mongoTemplate.count(query, Item.class);
     }
@@ -94,27 +96,5 @@ public class ItemReadService {
 
     public Criteria removeBlockedByCreatorsCriteria() {
         return Criteria.where("creatorId").not().in(readUserService.findAllBlockedBy(UserUtils.getUserId()));
-    }
-
-    public Long countAllByCreator(Long userId) {
-        Query query = new Query();
-        query.addCriteria(Criteria.where("creatorId").is(userId));
-        return mongoTemplate.count(query, "items");
-    }
-
-    private <T> Mono<T> listenableFutureToMono(ListenableFuture<T> future) {
-        return Mono.create(sink ->
-                Futures.addCallback(future, new FutureCallback<>() {
-                    @Override
-                    public void onSuccess(T result) {
-                        sink.success(result);
-                    }
-
-                    @Override
-                    public void onFailure(Throwable t) {
-                        sink.error(t);
-                    }
-                }, Runnable::run)
-        );
     }
 }

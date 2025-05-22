@@ -35,7 +35,7 @@ public class AuctionController {
 
     @GetMapping("/auction-for-item")
     public ResponseEntity<AuctionDTO> getAuctionForItem(@RequestParam("itemId") String id) {
-        Auction auction = auctionService.findAuctionByItemUserAndStatus(id, true);
+        Auction auction = auctionService.findAuctionForItem(id);
         if (auction == null) {
             return ResponseEntity.notFound().build();
         }

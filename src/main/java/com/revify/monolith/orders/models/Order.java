@@ -15,6 +15,10 @@ import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
+
 @Data
 @Builder
 @Document(collection = "order")
@@ -37,12 +41,31 @@ public class Order {
     @NotNull(message = "Shipment particle cannot be null")
     private OrderShipmentParticle shipmentParticle;
 
+    private Map<Long, Long> couriersInvolved = new HashMap<>();
+
     @Positive
     @NotNull(message = "Delivery time must persist")
     private Long deliveryTimeEnd;
 
     private Long createdAt;
     private Long updatedAt;
+
+    private Boolean isSuspended = false;
+
+    public void addShipmentParticle(OrderShipmentParticle particle) {
+        if (particle != null) {
+            OrderShipmentParticle last = this.getLast();
+
+            //only case is when head is null
+            if (last != null) {
+                particle.setPrevious(last);
+                last.setNext(particle);
+            } else {
+                this.shipmentParticle = particle;
+            }
+            couriersInvolved.put(particle.getCourierId(), Instant.now().toEpochMilli());
+        }
+    }
 
     public Tuple2<Integer, OrderShipmentParticle> removeShipmentParticle(Long courierId) {
         Tuple2<Integer, OrderShipmentParticle> particle = findShipmentParticle(0, this.shipmentParticle, courierId);
@@ -57,9 +80,18 @@ public class Order {
             if (previous != null) {
                 previous.setNext(next);
             }
+            couriersInvolved.removeIf(courierId::equals);
             return particle;
         }
         return null;
+    }
+
+    public OrderShipmentParticle getLast() {
+        var head = this.shipmentParticle;
+        while (head != null && head.getNext() != null) {
+            head = head.getNext();
+        }
+        return head;
     }
 
     public Tuple2<Integer, OrderShipmentParticle> findShipmentParticle(Long courierId) {

@@ -31,6 +31,7 @@ public class Item implements Serializable {
 
     private Long validUntil;
 
+    private boolean isPicked = false;
     private boolean isActive = true;
     private boolean isManuallyToggled = false;
 }

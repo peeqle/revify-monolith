@@ -151,10 +151,21 @@ public class AuctionService {
 
     public Boolean isAuctionCreatedByUser(String auctionId) {
         Long currentUserId = UserUtils.getUserId();
-        Query query = Query.query(Criteria.where("auctionId").is(auctionId)
+        Query query = Query.query(Criteria.where("_id").is(auctionId)
                 .and("creatorId").is(currentUserId));
 
         return mongoTemplate.exists(query, Auction.class);
+    }
+
+
+    public Auction findAuctionForItem(String itemId) {
+        Query query = Query.query(
+                Criteria.where("itemId").is(itemId)
+                        .and("bidsAcceptingTill")
+                        .gte(Instant.now().toEpochMilli())
+        );
+
+        return mongoTemplate.findOne(query, Auction.class);
     }
 
     public Auction findAuctionByItemUserAndStatus(String itemId, Boolean isActive) {

@@ -14,6 +14,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Slf4j
 @RestController
 @RequestMapping("/order")
@@ -22,6 +24,19 @@ import org.springframework.web.bind.annotation.*;
 public class OrderController {
 
     private final OrderService orderService;
+
+    @GetMapping("/all")
+    public ResponseEntity<List<OrderDTO>> getAllOrders(@RequestParam(name = "offset", defaultValue = "0") Integer offset,
+                                                       @RequestParam(name = "limit", defaultValue = "10") Integer limit) {
+        return ResponseEntity.ok(orderService.getUserOrders(offset, limit).stream().map(OrderDTO::from).toList());
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<List<OrderDTO>> getAllCourierOrders(@RequestParam(name = "offset", defaultValue = "0") Integer offset,
+                                                       @RequestParam(name = "limit", defaultValue = "10") Integer limit) {
+        return ResponseEntity.ok(orderService.getUserOrders(offset, limit).stream().map(OrderDTO::from).toList());
+    }
+
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

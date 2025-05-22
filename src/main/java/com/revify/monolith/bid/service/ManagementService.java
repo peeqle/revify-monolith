@@ -52,7 +52,7 @@ public class ManagementService {
      * Find last N items DESC
      */
     public List<Bid> findLastBids(String itemId, Integer limit) {
-        Auction auction = auctionService.findAuctionByItemUserAndStatus(itemId, true);
+        Auction auction = auctionService.findAuctionForItem(itemId);
         if (auction == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found");
         }
@@ -79,7 +79,7 @@ public class ManagementService {
     }
 
     public List<Bid> findAllBids(String itemId) {
-        Auction auction = auctionService.findAuctionByItemUserAndStatus(itemId, true);
+        Auction auction = auctionService.findAuctionForItem(itemId);
         if (auction == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found for item: " + itemId);
         }

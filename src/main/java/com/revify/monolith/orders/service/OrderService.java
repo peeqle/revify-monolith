@@ -8,24 +8,28 @@ import com.revify.monolith.commons.messaging.dto.ItemBillingCreation;
 import com.revify.monolith.commons.models.bid.AuctionCreationRequest;
 import com.revify.monolith.commons.models.bid.PathFragment;
 import com.revify.monolith.commons.models.orders.*;
+import com.revify.monolith.commons.models.user.UserRole;
 import com.revify.monolith.notifications.connector.producers.FanoutNotificationProducer;
 import com.revify.monolith.orders.models.Delay;
 import com.revify.monolith.orders.models.Order;
 import com.revify.monolith.orders.util.OrderMapper;
+import com.revify.monolith.user.models.user.AppUser;
+import com.revify.monolith.user.service.ReadUserService;
 import io.vavr.Tuple2;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.HttpStatus;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-import reactor.core.publisher.Flux;
 
-import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
@@ -39,8 +43,38 @@ public class OrderService {
 
     private final DelayService delayService;
 
+    private final ReadUserService readUserService;
+
     //todo remove and use direct, when normal integration utils arise
     private final FanoutNotificationProducer notificationProducer;
+
+    public List<Order> getCourierOrders(Integer offset, Integer limit) {
+        Optional<AppUser> currentUser = readUserService.getCurrentUser();
+        if (currentUser.isPresent() && currentUser.get().getClientUserRole() == UserRole.CLIENT) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
+        Query query = Query.query(
+                Criteria.where("receiverId").is(UserUtils.getUserId())
+                        .and("isSuspended").is(false)
+        ).skip((long) offset*limit).limit(limit);
+
+        return mongoTemplate.find(query, Order.class);
+    }
+
+    public List<Order> getUserOrders(Integer offset, Integer limit) {
+        Optional<AppUser> currentUser = readUserService.getCurrentUser();
+        if (currentUser.isPresent() && currentUser.get().getClientUserRole() == UserRole.CLIENT) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
+        Query query = Query.query(
+                Criteria.where("receiverId").is(UserUtils.getUserId())
+                        .and("isSuspended").is(false)
+        ).skip((long) offset*limit).limit(limit);;
+
+        return mongoTemplate.find(query, Order.class);
+    }
 
     public Order createOrder(OrderCreationDTO orderDto) {
         Order newOrder = mongoTemplate.save(OrderMapper.to(orderDto));
@@ -143,7 +177,7 @@ public class OrderService {
 
     //todo append to the _next particle, calculating the price or replace existing after submitted consent by both sides
     public Order assignCourier(Long courierId, String orderId) {
-        if(ObjectId.isValid(orderId)) {
+        if (ObjectId.isValid(orderId)) {
             Order orderById = findOrderById(new ObjectId(orderId));
             return mongoTemplate.save(applyCourierAssignment(orderById, courierId));
         }
