@@ -38,12 +38,11 @@ public class ItemCompositeConnectionController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/invitation/create-link")
+    @GetMapping("/invitation/create-link")
     public ResponseEntity<CompositeItemRequestLink.CompositeItemRequestLinkDTO> createLink(@RequestParam String itemId) {
         CompositeItemRequestLink invitationLink = compositeItemConnectionService.createInvitationLink(null, itemId);
         return ResponseEntity.ok(CompositeItemRequestLink.CompositeItemRequestLinkDTO.from(invitationLink));
     }
 
-    public record Invitation(List<Long> invitations, String itemId) {
-    }
+    public record Invitation(List<Long> invitations, String itemId) { }
 }

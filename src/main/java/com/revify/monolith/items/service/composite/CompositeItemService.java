@@ -2,11 +2,14 @@ package com.revify.monolith.items.service.composite;
 
 import com.revify.monolith.commons.auth.sync.UserUtils;
 import com.revify.monolith.commons.messaging.dto.TopicMessageBody;
+import com.revify.monolith.currency_reader.service.CurrencyService;
 import com.revify.monolith.items.model.item.Item;
 import com.revify.monolith.items.model.item.composite.CompositeItem;
 import com.revify.monolith.items.service.item.ItemReadService;
 import com.revify.monolith.notifications.connector.producers.TopicNotificationProducer;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -23,6 +26,7 @@ import java.util.stream.Collectors;
 import static com.revify.monolith.items.utils.CompositeItemCriteriaUtil.*;
 
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CompositeItemService {
@@ -32,6 +36,8 @@ public class CompositeItemService {
     private final MongoTemplate mongoTemplate;
 
     private final ItemReadService itemReadService;
+
+    private final CurrencyService currencyService;
 
     /*
     try to create composite item for item instance and notify all people having same destination items
@@ -72,6 +78,29 @@ public class CompositeItemService {
         }
 
         return mongoTemplate.save(compositeItem);
+    }
+
+    public void assignItemToComposite(ObjectId compositeId, ObjectId itemId) {
+        CompositeItem compositeItem = findById(compositeId.toHexString());
+        if (compositeItem == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Composite item not found");
+        Item item = itemReadService.findById(itemId.toHexString());
+        if (item == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not found");
+
+        if (compositeItem.getIsActive() && compositeItem.getAuthorizedUsers().contains(UserUtils.getUserId())) {
+            compositeItem.getItemsInvolved().add(itemId.toHexString());
+            compositeItem.getItemsCategories().addAll(item.getItemDescription().getCategories());
+
+            try {
+                compositeItem.setOverallCost(currencyService.mergeTwo(compositeItem.getOverallCost(), item.getPrice()));
+            } catch (Exception e) {
+                log.warn("Error while merging cost", e);
+            }
+
+            compositeItem.getAuthorizedUsers().add(item.getCreatorId());
+
+            mongoTemplate.save(compositeItem);
+        }
+        throw new ResponseStatusException(HttpStatus.CONFLICT, "Composite item cannot be managed");
     }
 
     public CompositeItem findForItem(String itemId) {

@@ -3,10 +3,11 @@ package com.revify.monolith.items;
 import com.revify.monolith.items.model.item.composite.CompositeItem;
 import com.revify.monolith.items.service.composite.CompositeItemService;
 import lombok.RequiredArgsConstructor;
+import org.bson.types.ObjectId;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Mono;
 
 import java.util.Map;
 
@@ -25,6 +26,12 @@ public class ItemCompositeController {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(compositeItem);
+    }
+
+    @PostMapping("/assign")
+    public ResponseEntity<Object> assignItemToComponent(@RequestParam("itemId") ObjectId itemId, @RequestParam("compositeId") ObjectId compositeId) {
+        compositeItemService.assignItemToComposite(compositeId, itemId);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping

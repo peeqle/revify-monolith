@@ -16,6 +16,17 @@ public class Price implements Comparable<Price> {
         this.amount = amount;
     }
 
+    public static Price.Builder builder() {
+        return new Price.Builder();
+    }
+
+    public static Price defaultPrice() {
+        return Price.builder()
+                .withCurrency(Currency.USD)
+                .withAmount(BigDecimal.ZERO)
+                .build();
+    }
+
     public static class Builder {
 
         private Currency currency;

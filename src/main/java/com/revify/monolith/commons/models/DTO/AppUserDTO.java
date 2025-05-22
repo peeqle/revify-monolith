@@ -1,35 +1,30 @@
 package com.revify.monolith.commons.models.DTO;
 
+import com.revify.monolith.user.models.MicroUserDTO;
 import com.revify.monolith.user.models.user.AppUser;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
-@Builder
+@SuperBuilder
 @AllArgsConstructor
 @NoArgsConstructor
-public class AppUserDTO {
+public class AppUserDTO extends MicroUserDTO {
     private Long id;
-    private String displayName;
-    private String username;
     private String email;
     private String phoneNumber;
 
     private boolean overrideChange = false;
 
     public static AppUserDTO from(AppUser appUser) {
-        AppUserDTO appUserDTO = new AppUserDTO();
-        appUserDTO.id = appUser.getId();
-        appUserDTO.username = appUser.getUsername();
-        appUserDTO.email = appUser.getEmail();
-        appUserDTO.phoneNumber = appUser.getPhoneNumber();
-        appUserDTO.displayName = appUser.getCommonUserName();
-        return appUserDTO;
-    }
-
-    public boolean materialized() {
-        return this.username != null && this.email != null && this.phoneNumber != null;
+        return AppUserDTO.builder()
+                .displayName(appUser.getCommonUserName())
+                .userRole(appUser.getClientUserRole())
+                .options(appUser.getAppUserOptions())
+                .email(appUser.getEmail())
+                .id(appUser.getId())
+                .phoneNumber(appUser.getPhoneNumber())
+                .build();
     }
 }

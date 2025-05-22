@@ -27,6 +27,26 @@ public class CurrencyService {
         return gsonThreadLocal.get().fromJson((String) o, CurrencySnapshot.class);
     }
 
+    /**
+     * @param first  - headliner
+     * @param second
+     * @return
+     */
+    public Price mergeTwo(Price first, Price second) {
+        if (first.getCurrency() == second.getCurrency()) {
+            return Price.builder()
+                    .withAmount(first.getAmount().add(second.getAmount()))
+                    .withCurrency(first.getCurrency())
+                    .build();
+        }
+
+        var secondConvertedAmount = convertTo(second.getCurrency().getName(), first.getCurrency().getName(), second.getAmount().doubleValue());
+        return Price.builder()
+                .withCurrency(first.getCurrency())
+                .withAmount(first.getAmount().add(secondConvertedAmount))
+                .build();
+    }
+
     public BigDecimal convertTo(String from, String to, Double amount) {
         CurrencySnapshot currencyTo = findCurrency(to);
         CurrencySnapshot currencyFrom = findCurrency(from);

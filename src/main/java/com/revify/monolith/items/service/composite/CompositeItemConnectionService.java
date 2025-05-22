@@ -101,8 +101,11 @@ public class CompositeItemConnectionService {
             link = CompositeItemRequestLink.builder()
                     .validUntil(validUntil == null ? Instant.now().plus(3, ChronoUnit.DAYS).toEpochMilli() : validUntil)
                     .compositeItem(compositeItem)
+                    .isActive(true)
                     .hashKey(generateHash())
                     .build();
+
+            link = mongoTemplate.save(link);
         }
         return link;
     }
