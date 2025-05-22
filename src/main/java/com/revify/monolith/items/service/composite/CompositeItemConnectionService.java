@@ -123,6 +123,12 @@ public class CompositeItemConnectionService {
         }
 
         CompositeItem compositeItem = byHash.getCompositeItem();
+        if (compositeItem == null || compositeItem.getId() == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Composite item is not found");
+        }
+        if (compositeItem.getCreatorId() == UserUtils.getUserId()) {
+            return;
+        }
         mongoTemplate.save(compositeItem.addUserConnected(UserUtils.getUserId()));
     }
 

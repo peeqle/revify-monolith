@@ -32,9 +32,9 @@ public class ItemCompositeConnectionController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/invitation/link/{code}")
-    public ResponseEntity<?> connectViaLink(@PathVariable String code) {
-        compositeItemConnectionService.connectViaLink(code);
+    @PostMapping("/invitation/link")
+    public ResponseEntity<?> connectViaLink(@RequestParam("compositeHash") String compositeHash) {
+        compositeItemConnectionService.connectViaLink(compositeHash);
         return ResponseEntity.ok().build();
     }
 
