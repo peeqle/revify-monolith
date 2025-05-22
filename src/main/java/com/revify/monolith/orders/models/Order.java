@@ -15,9 +15,8 @@ import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Builder
@@ -41,7 +40,7 @@ public class Order {
     @NotNull(message = "Shipment particle cannot be null")
     private OrderShipmentParticle shipmentParticle;
 
-    private Map<Long, Long> couriersInvolved = new HashMap<>();
+    private List<Long> couriersInvolved = new ArrayList<>();
 
     @Positive
     @NotNull(message = "Delivery time must persist")
@@ -63,7 +62,9 @@ public class Order {
             } else {
                 this.shipmentParticle = particle;
             }
-            couriersInvolved.put(particle.getCourierId(), Instant.now().toEpochMilli());
+
+            couriersInvolved.removeIf(particle.getCourierId()::equals);
+            couriersInvolved.add(particle.getCourierId());
         }
     }
 

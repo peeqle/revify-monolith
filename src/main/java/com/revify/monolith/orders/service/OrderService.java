@@ -49,8 +49,7 @@ public class OrderService {
     private final FanoutNotificationProducer notificationProducer;
 
     public List<Order> getCourierOrders(Integer offset, Integer limit) {
-        Optional<AppUser> currentUser = readUserService.getCurrentUser();
-        if (currentUser.isPresent() && currentUser.get().getClientUserRole() == UserRole.CLIENT) {
+        if (!readUserService.isNotClient()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 

@@ -34,7 +34,7 @@ public class OrderController {
     @GetMapping("/all")
     public ResponseEntity<List<OrderDTO>> getAllCourierOrders(@RequestParam(name = "offset", defaultValue = "0") Integer offset,
                                                        @RequestParam(name = "limit", defaultValue = "10") Integer limit) {
-        return ResponseEntity.ok(orderService.getUserOrders(offset, limit).stream().map(OrderDTO::from).toList());
+        return ResponseEntity.ok(orderService.getCourierOrders(offset, limit).stream().map(OrderDTO::from).toList());
     }
 
 

@@ -1,6 +1,7 @@
 package com.revify.monolith.user.service;
 
 import com.revify.monolith.commons.auth.sync.UserUtils;
+import com.revify.monolith.commons.models.user.UserRole;
 import com.revify.monolith.user.models.user.AppUser;
 import com.revify.monolith.user.service.data.AppUserReadRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,11 @@ import java.util.Optional;
 public class ReadUserService extends CrudService<AppUser> {
 
     private final AppUserReadRepository repository;
+
+    public boolean isNotClient() {
+        Optional<AppUser> currentUser = getCurrentUser();
+        return currentUser.isPresent() && currentUser.get().getClientUserRole() != UserRole.CLIENT;
+    }
 
     public Optional<AppUser> getCurrentUser() {
         return repository.findById(UserUtils.getUserId());
