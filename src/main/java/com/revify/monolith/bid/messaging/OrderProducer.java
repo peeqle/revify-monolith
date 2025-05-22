@@ -12,6 +12,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+
 @Component
 @RequiredArgsConstructor
 public class OrderProducer {
@@ -24,7 +27,7 @@ public class OrderProducer {
         kafkaTemplate.send(KafkaTopic.ORDER_MODEL_CREATION, gson.toJson(OrderCreationDTO.builder()
                 .receiverId(auction.getCreatorId())
                 .itemId(auction.getItemId())
-                .deliveryTimeEnd(auction.getDeliveryTimeEnd())
+                .deliveryTimeEnd(Instant.now().plus(7, ChronoUnit.DAYS).toEpochMilli())
                 .status(OrderShipmentStatus.CREATED)
                 .shipmentParticle(
                         OrderShipmentParticle.builder()

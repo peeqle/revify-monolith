@@ -58,7 +58,11 @@ public class AuctionController {
     }
 
     @PostMapping("/close-auction")
-    public ResponseEntity<AuctionDTO> closeAuction(@RequestParam ObjectId auctionId) {
+    public ResponseEntity<?> closeAuction(@RequestParam ObjectId auctionId) {
+        if (!auctionService.isAuctionCreatedByUser(auctionId)) {
+            return ResponseEntity.badRequest().body("You cannot finish that auction");
+        }
+
         log.debug("Closing auction");
         Auction auction = auctionService.closeAuction(auctionId);
         if (auction == null) {
@@ -68,7 +72,10 @@ public class AuctionController {
     }
 
     @PostMapping("/archive-auction")
-    public ResponseEntity<AuctionDTO> archiveAuction(@RequestParam ObjectId auctionId) {
+    public ResponseEntity<?> archiveAuction(@RequestParam ObjectId auctionId) {
+        if (!auctionService.isAuctionCreatedByUser(auctionId)) {
+            return ResponseEntity.badRequest().body("You cannot finish that auction");
+        }
         log.debug("Archiving auction");
         Auction auction = auctionService.archiveAuction(auctionId);
         if (auction == null) {

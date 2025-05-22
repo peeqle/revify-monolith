@@ -145,23 +145,13 @@ public class AuctionService {
         return mongoTemplate.findOne(query, Auction.class);
     }
 
-    public Boolean isAuctionForItemCreatedByUser(String itemId) {
-        Long currentUserId = UserUtils.getUserId();
-        Query query = Query.query(Criteria.where("itemId").is(itemId)
-                .and("isActive").is(true)
-                .and("creatorId").is(currentUserId));
-
-        return mongoTemplate.exists(query, Auction.class);
-    }
-
     public Boolean isAuctionCreatedByUser(ObjectId auctionId) {
-        return isAuctionForItemCreatedByUser(auctionId.toHexString());
+        return isAuctionCreatedByUser(auctionId.toHexString());
     }
 
     public Boolean isAuctionCreatedByUser(String auctionId) {
         Long currentUserId = UserUtils.getUserId();
         Query query = Query.query(Criteria.where("auctionId").is(auctionId)
-                .and("isActive").is(true)
                 .and("creatorId").is(currentUserId));
 
         return mongoTemplate.exists(query, Auction.class);
