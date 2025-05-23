@@ -1,16 +1,14 @@
 package com.revify.monolith.config.data;
 
+import com.revify.monolith.geo.model.StoredGeoLocation;
 import com.revify.monolith.geo.model.UserGeolocation;
 import com.revify.monolith.items.model.item.Item;
 import com.revify.monolith.items.model.item.composite.CompositeItem;
-import com.revify.monolith.notifications.models.Notification;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.data.mongodb.core.index.GeoSpatialIndexType;
 import org.springframework.data.mongodb.core.index.GeospatialIndex;
 import org.springframework.data.mongodb.core.index.Index;
@@ -28,7 +26,10 @@ public class MongoIndexesInitializer {
                 .ensureIndex(new Index("userId", Sort.Direction.DESC));
 
         mongoTemplate.indexOps(UserGeolocation.class)
-                .ensureIndex(new GeospatialIndex("current.location").typed(GeoSpatialIndexType.GEO_2DSPHERE));
+                .ensureIndex(new GeospatialIndex("geoLocation.location").typed(GeoSpatialIndexType.GEO_2DSPHERE));
+
+        mongoTemplate.indexOps(StoredGeoLocation.class)
+                .ensureIndex(new GeospatialIndex("geoLocation.location").typed(GeoSpatialIndexType.GEO_2DSPHERE));
 
         // item indexes
         mongoTemplate.indexOps(Item.class)

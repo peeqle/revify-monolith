@@ -17,12 +17,7 @@ import java.util.Objects;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-
-@Document("geolocation")
 public class GeoLocation implements Comparable<GeoLocation> {
-    @Id
-    private ObjectId id;
-
     @GeoSpatialIndexed(type = GeoSpatialIndexType.GEO_2DSPHERE)
     private GeoJsonPoint location;
 
@@ -33,8 +28,6 @@ public class GeoLocation implements Comparable<GeoLocation> {
     private String countryCode;
     private String countryName;
     private String displayName;
-
-    private Long createdAt;
 
     @Override
     public boolean equals(Object s) {

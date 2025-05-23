@@ -4,6 +4,7 @@ import com.google.gson.annotations.SerializedName;
 import com.revify.monolith.commons.auth.sync.UserUtils;
 import com.revify.monolith.geo.model.GeoLocation;
 import com.revify.monolith.geo.model.Place;
+import com.revify.monolith.geo.model.StoredGeoLocation;
 import com.revify.monolith.geo.model.UserGeolocation;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 
+import static com.revify.monolith.geo.GeolocationUtils.haversineDistance;
 import static com.revify.monolith.geo.GeolocationUtils.mapGeolocation;
 
 @Service
@@ -44,34 +46,39 @@ public class GeolocationService {
     }
 
     public GeoLocation resolveLocation(Double latitude, Double longitude) {
-        GeoLocation forCoordinates = findForCoordinates(latitude, longitude);
+        StoredGeoLocation forCoordinates = findForCoordinates(latitude, longitude);
         if (forCoordinates == null) {
             Place place = nominatimService.readGeolocationAddress(latitude, longitude);
             if (place != null) {
-                return mongoTemplate.save(mapGeolocation(place));
+                GeoLocation geoLocation = mapGeolocation(place);
+                geoLocation.setLocation(new GeoJsonPoint(longitude, latitude));
+
+                forCoordinates = mongoTemplate.save(StoredGeoLocation.with(geoLocation));
+            } else {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cannot resolve geolocation for: " + latitude + ", " + longitude);
             }
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cannot resolve geolocation for: " + latitude + ", " + longitude);
         }
-        return forCoordinates;
+        return forCoordinates.getGeoLocation();
     }
 
     public void updateUserGeolocation(Double lat, Double lon) {
         if (lat != null && lon != null) {
             UserGeolocation latestUserGeolocation = findLatestUserGeolocation();
             if (latestUserGeolocation != null) {
-                GeoLocation one = findById(latestUserGeolocation.getGeolocationId());
-                if (one != null && latestUserGeolocation.haversineDistance(lat, lon, one.getLocation().getY(), one.getLocation().getX()) < 5) {
+                GeoLocation geoLocation = latestUserGeolocation.getGeoLocation();
+                if (geoLocation != null && geoLocation.getLocation() != null
+                        && haversineDistance(lat, lon, geoLocation.getLocation().getY(), geoLocation.getLocation().getX()) < 5) {
                     return;
                 }
             }
 
-            GeoLocation place = resolveLocation(lat, lon);
+            GeoLocation location = resolveLocation(lat, lon);
 
-            if (place != null) {
+            if (location != null) {
                 if (latestUserGeolocation == null) {
                     latestUserGeolocation = new UserGeolocation();
                 }
-                latestUserGeolocation.setGeolocationId(place.getId());
+                latestUserGeolocation.setGeoLocation(location);
                 latestUserGeolocation.setUserId(UserUtils.getUserId());
                 latestUserGeolocation.setTimestamp(Instant.now().toEpochMilli());
                 mongoTemplate.save(latestUserGeolocation);
@@ -79,9 +86,9 @@ public class GeolocationService {
         }
     }
 
-    public GeoLocation findForCoordinates(Double lat, Double lon) {
-        Query query = Query.query(Criteria.where("location").near(new GeoJsonPoint(lon, lat)));
-        return mongoTemplate.findOne(query, GeoLocation.class);
+    public StoredGeoLocation findForCoordinates(Double lat, Double lon) {
+        Query query = Query.query(Criteria.where("geoLocation.location").near(new GeoJsonPoint(lon, lat)));
+        return mongoTemplate.findOne(query, StoredGeoLocation.class);
     }
 
     @Data

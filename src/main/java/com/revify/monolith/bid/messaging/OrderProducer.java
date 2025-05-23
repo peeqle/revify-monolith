@@ -8,7 +8,6 @@ import com.revify.monolith.commons.messaging.KafkaTopic;
 import com.revify.monolith.commons.models.orders.OrderCreationDTO;
 import com.revify.monolith.commons.models.orders.OrderShipmentParticle;
 import com.revify.monolith.commons.models.orders.OrderShipmentStatus;
-import com.revify.monolith.geo.model.GeoLocation;
 import com.revify.monolith.geo.model.UserGeolocation;
 import com.revify.monolith.geo.service.GeolocationService;
 import com.revify.monolith.items.model.item.Item;
@@ -47,10 +46,7 @@ public class OrderProducer {
 
         UserGeolocation latestUserGeolocation = geolocationService.findLatestUserGeolocation(bid.getUserId());
         if (latestUserGeolocation != null) {
-            GeoLocation byId = geolocationService.findById(latestUserGeolocation.getGeolocationId());
-            if (byId != null) {
-                builder.from(byId);
-            }
+            builder.from(latestUserGeolocation.getGeoLocation());
         }
         builder.deliveryTimeEstimated(1000L * 60 * 60 * 24 * 7);
 
