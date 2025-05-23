@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.bson.types.ObjectId;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -48,31 +49,19 @@ public class OrderService {
     //todo remove and use direct, when normal integration utils arise
     private final FanoutNotificationProducer notificationProducer;
 
-    public List<Order> getCourierOrders(Integer offset, Integer limit) {
-        if (!readUserService.isNotClient()) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
-
-        Query query = Query.query(
-                Criteria.where("receiverId").is(UserUtils.getUserId())
-                        .and("isSuspended").is(false)
-        ).skip((long) offset*limit).limit(limit);
-
-        return mongoTemplate.find(query, Order.class);
-    }
-
     public List<Order> getUserOrders(Integer offset, Integer limit) {
-        Optional<AppUser> currentUser = readUserService.getCurrentUser();
-        if (currentUser.isPresent() && currentUser.get().getClientUserRole() == UserRole.CLIENT) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        Criteria criteria = Criteria.where("isSuspended").is(false);
+
+        if(!readUserService.isClient()) {
+            criteria.andOperator(Criteria.where("receiverId").is(UserUtils.getUserId())
+                    .orOperator(Criteria.where("couriersInvolved").in(UserUtils.getUserId())));
+        }else {
+            criteria.and("receiverId").is(UserUtils.getUserId());
         }
 
-        Query query = Query.query(
-                Criteria.where("receiverId").is(UserUtils.getUserId())
-                        .and("isSuspended").is(false)
-        ).skip((long) offset*limit).limit(limit);;
-
-        return mongoTemplate.find(query, Order.class);
+        return mongoTemplate.find(Query.query(criteria)
+                        .with(Sort.by(Sort.Direction.ASC, "deliveryTimeEnd"))
+                .skip((long) offset*limit).limit(limit), Order.class);
     }
 
     public Order createOrder(OrderCreationDTO orderDto) {

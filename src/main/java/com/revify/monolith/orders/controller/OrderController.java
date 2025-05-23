@@ -31,13 +31,6 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getUserOrders(offset, limit).stream().map(OrderDTO::from).toList());
     }
 
-    @GetMapping("/all")
-    public ResponseEntity<List<OrderDTO>> getAllCourierOrders(@RequestParam(name = "offset", defaultValue = "0") Integer offset,
-                                                       @RequestParam(name = "limit", defaultValue = "10") Integer limit) {
-        return ResponseEntity.ok(orderService.getCourierOrders(offset, limit).stream().map(OrderDTO::from).toList());
-    }
-
-
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<OrderDTO> createOrder(@RequestBody OrderCreationDTO orderCreationDTO) {
@@ -47,7 +40,7 @@ public class OrderController {
         if (order == null) {
             return ResponseEntity.badRequest().build();
         }
-        return ResponseEntity.ok(OrderMapper.from(order));
+        return ResponseEntity.ok(OrderDTO.from(order));
     }
 
     @PatchMapping("{orderId}")
@@ -68,7 +61,7 @@ public class OrderController {
 
         if (ObjectId.isValid(orderId)) {
             Order orderById = orderService.findOrderById(new ObjectId(orderId));
-            return ResponseEntity.ok(OrderMapper.from(orderById));
+            return ResponseEntity.ok(OrderDTO.from(orderById));
         }
         return ResponseEntity.notFound().build();
     }
@@ -82,7 +75,7 @@ public class OrderController {
         log.debug("Caught request to delete order by id. Order ID: {}", orderId);
         if (ObjectId.isValid(orderId)) {
             Order order = orderService.deleteOrder(new ObjectId(orderId));
-            return ResponseEntity.ok(OrderMapper.from(order));
+            return ResponseEntity.ok(OrderDTO.from(order));
         }
         return ResponseEntity.notFound().build();
     }

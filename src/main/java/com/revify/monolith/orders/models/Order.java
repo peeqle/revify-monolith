@@ -50,6 +50,7 @@ public class Order {
     private Long updatedAt;
 
     private Boolean isSuspended = false;
+    private Boolean isPaid = false;
 
     public void addShipmentParticle(OrderShipmentParticle particle) {
         if (particle != null) {

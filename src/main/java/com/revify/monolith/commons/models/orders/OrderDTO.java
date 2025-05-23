@@ -11,10 +11,12 @@ public record OrderDTO(
         OrderAdditionalStatus additionalStatus,
         Long deliveryTimeEnd,
         OrderShipmentParticle shipmentParticle,
-        Boolean isSuspended
+        Boolean isSuspended,
+        Boolean isPaid
 ) {
     public static OrderDTO from(Order order) {
         return new OrderDTO(order.getId().toHexString(), order.getReceiverId(), order.getItemId(), order.getStatus(),
-                order.getAdditionalStatus(), order.getDeliveryTimeEnd(), order.getShipmentParticle(), order.getIsSuspended());
+                order.getAdditionalStatus(), order.getDeliveryTimeEnd(), order.getShipmentParticle(), order.getIsSuspended(),
+                order.getIsPaid());
     }
 }
