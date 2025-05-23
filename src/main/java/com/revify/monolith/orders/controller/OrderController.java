@@ -5,7 +5,6 @@ import com.revify.monolith.commons.models.orders.OrderDTO;
 import com.revify.monolith.commons.models.orders.OrderStatusUpdateRequest;
 import com.revify.monolith.orders.models.Order;
 import com.revify.monolith.orders.service.OrderService;
-import com.revify.monolith.orders.util.OrderMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
@@ -29,18 +28,6 @@ public class OrderController {
     public ResponseEntity<List<OrderDTO>> getAllOrders(@RequestParam(name = "offset", defaultValue = "0") Integer offset,
                                                        @RequestParam(name = "limit", defaultValue = "10") Integer limit) {
         return ResponseEntity.ok(orderService.getUserOrders(offset, limit).stream().map(OrderDTO::from).toList());
-    }
-
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public ResponseEntity<OrderDTO> createOrder(@RequestBody OrderCreationDTO orderCreationDTO) {
-        log.debug("Caught request to create order.");
-
-        Order order = orderService.createOrder(orderCreationDTO);
-        if (order == null) {
-            return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.ok(OrderDTO.from(order));
     }
 
     @PatchMapping("{orderId}")

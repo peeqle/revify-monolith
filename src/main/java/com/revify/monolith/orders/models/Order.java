@@ -1,8 +1,10 @@
 package com.revify.monolith.orders.models;
 
 import com.revify.monolith.commons.models.orders.OrderAdditionalStatus;
+import com.revify.monolith.commons.models.orders.OrderCreationDTO;
 import com.revify.monolith.commons.models.orders.OrderShipmentParticle;
 import com.revify.monolith.commons.models.orders.OrderShipmentStatus;
+import com.revify.monolith.orders.util.OrderShipmentParticleMapper;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import jakarta.validation.constraints.NotNull;
@@ -110,5 +112,26 @@ public class Order {
             return Tuple.of(index, current);
         }
         return findShipmentParticle(index + 1, current.getNext(), courierId);
+    }
+
+    public static Order from(OrderCreationDTO creationDTO) {
+        if (creationDTO == null) {
+            throw new IllegalArgumentException("OrderCreationDTO cannot be null");
+        }
+
+        var currentTime = System.currentTimeMillis();
+
+        Order build = Order.builder()
+                .createdAt(currentTime)
+                .updatedAt(currentTime)
+                .status(creationDTO.status())
+                .itemId(creationDTO.itemId())
+                .deliveryTimeEnd(creationDTO.deliveryTimeEnd())
+                .additionalStatus(creationDTO.additionalStatus())
+                .receiverId(creationDTO.receiverId())
+                .build();
+
+        build.addShipmentParticle(creationDTO.shipmentParticle());
+        return build;
     }
 }

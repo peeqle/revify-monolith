@@ -11,6 +11,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -52,5 +53,37 @@ public class UserGeolocation implements Serializable {
             return exitValue;
         }
     }
+
+    /**
+     * Returns KM
+     *
+     * @param lat1
+     * @param lon1
+     * @param lat2
+     * @param lon2
+     * @return
+     */
+    public double haversineDistance(Double lat1, Double lon1, Double lat2, Double lon2) {
+        final int R = 6371; // Earth's radius in km
+        double dLat = (lat2 - lat1) * Math.PI / 180;
+        double dLon = (lon2 - lon1) * Math.PI / 180;
+        double a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+
+    public Boolean isWorthUpdating(UserGeolocation other) {
+        GeoJsonPoint location = this.current.getLocation();
+        return haversineDistance(location.getY(), location.getX(), other.current.getLocation().getY(), other.current.getLocation().getX()) < 5;
+    }
+
+    public Boolean isWorthUpdating(Double latO, Double lonO) {
+        GeoJsonPoint location = this.current.getLocation();
+        return haversineDistance(location.getY(), location.getX(), latO, lonO) < 5;
+    }
+
 }
 

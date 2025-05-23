@@ -8,12 +8,9 @@ import com.revify.monolith.commons.messaging.dto.ItemBillingCreation;
 import com.revify.monolith.commons.models.bid.AuctionCreationRequest;
 import com.revify.monolith.commons.models.bid.PathFragment;
 import com.revify.monolith.commons.models.orders.*;
-import com.revify.monolith.commons.models.user.UserRole;
 import com.revify.monolith.notifications.connector.producers.FanoutNotificationProducer;
 import com.revify.monolith.orders.models.Delay;
 import com.revify.monolith.orders.models.Order;
-import com.revify.monolith.orders.util.OrderMapper;
-import com.revify.monolith.user.models.user.AppUser;
 import com.revify.monolith.user.service.ReadUserService;
 import io.vavr.Tuple2;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +27,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
@@ -65,7 +61,7 @@ public class OrderService {
     }
 
     public Order createOrder(OrderCreationDTO orderDto) {
-        Order newOrder = mongoTemplate.save(OrderMapper.to(orderDto));
+        Order newOrder = mongoTemplate.save(Order.from(orderDto));
         if (newOrder.getId() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order creation failed");
         }

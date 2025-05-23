@@ -1,7 +1,7 @@
 package com.revify.monolith.geo.service;
 
-import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
+import com.revify.monolith.commons.auth.sync.UserUtils;
 import com.revify.monolith.commons.geolocation.GeoLocation;
 import com.revify.monolith.geo.model.Address;
 import com.revify.monolith.geo.model.Place;
@@ -10,7 +10,11 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
+
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -20,36 +24,36 @@ public class GeolocationService {
 
     private final NominatimService nominatimService;
 
-    public UserGeolocation resolveGeolocation(Long senderId, Long timestamp, Double lat, Double lon) {
+    public UserGeolocation findLatestUserGeolocation() {
+        return mongoTemplate.findOne(Query
+                .query(Criteria.where("userId").is(UserUtils.getUserId())), UserGeolocation.class);
+    }
+
+    public UserGeolocation findLatestUserGeolocation(Long userId) {
+        return mongoTemplate.findOne(Query
+                .query(Criteria.where("userId").is(userId)), UserGeolocation.class);
+    }
+
+    public void updateUserGeolocation(Double lat, Double lon) {
         if (lat != null && lon != null) {
+            UserGeolocation latestUserGeolocation = findLatestUserGeolocation();
+            if (latestUserGeolocation != null && !latestUserGeolocation.isWorthUpdating(lat, lon)) {
+                return;
+            }
             Place place = nominatimService.readGeolocationAddress(lat, lon);
+
             if (place != null) {
                 GeoLocation geoLocation = mapGeolocation(place);
                 geoLocation.setLocation(new GeoJsonPoint(lat, lon));
-
-                UserGeolocation userGeolocation = new UserGeolocation();
-                userGeolocation.setCurrent(geoLocation);
-                userGeolocation.setUserId(senderId);
-                userGeolocation.setTimestamp(timestamp);
-                return mongoTemplate.save(userGeolocation);
+                if (latestUserGeolocation == null) {
+                    latestUserGeolocation = new UserGeolocation();
+                }
+                latestUserGeolocation.setCurrent(geoLocation);
+                latestUserGeolocation.setUserId(UserUtils.getUserId());
+                latestUserGeolocation.setTimestamp(Instant.now().toEpochMilli());
+                mongoTemplate.save(latestUserGeolocation);
             }
         }
-        return null;
-    }
-
-    @Data
-    public static class GeolocationConsumerRecord {
-        private String topic;
-        @SerializedName("sender_id")
-        private Long senderId;
-        private Long timestamp;
-        private String payload;
-    }
-
-    @Data
-    public static class Payload {
-        private Double lat;
-        private Double lon;
     }
 
     private static GeoLocation mapGeolocation(Place place) {
@@ -67,5 +71,21 @@ public class GeolocationService {
         geolocation.setDisplayName(place.getDisplay_name());
 
         return geolocation;
+    }
+
+    @Data
+    public static class GeolocationConsumerRecord {
+
+        private String topic;
+        @SerializedName("sender_id")
+        private Long senderId;
+        private Long timestamp;
+        private String payload;
+    }
+
+    @Data
+    public static class Payload {
+        private Double lat;
+        private Double lon;
     }
 }

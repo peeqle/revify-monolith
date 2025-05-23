@@ -6,6 +6,8 @@ import com.revify.monolith.bid.models.Bid;
 import com.revify.monolith.commons.auth.sync.UserUtils;
 import com.revify.monolith.commons.models.bid.BidCreationRequest;
 import com.revify.monolith.currency_reader.service.CurrencyService;
+import com.revify.monolith.items.model.item.Item;
+import com.revify.monolith.items.service.item.ItemReadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
@@ -32,6 +34,7 @@ public class ManagementService {
     private final AuctionService auctionService;
 
     private final OrderProducer orderProducer;
+    private final ItemReadService itemReadService;
 
     public Bid findById(ObjectId id) {
         return mongoTemplate.findById(id, Bid.class);
@@ -96,7 +99,7 @@ public class ManagementService {
         if (auction == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found for item: " + bidCreationRequest.getItemId());
         }
-        if(auction.getCreatorId() == UserUtils.getUserId()) {
+        if (auction.getCreatorId() == UserUtils.getUserId()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot place a bid to your item");
         }
         Bid newBid = Bid.builder()

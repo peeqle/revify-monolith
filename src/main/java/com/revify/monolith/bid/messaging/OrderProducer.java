@@ -8,9 +8,15 @@ import com.revify.monolith.commons.messaging.KafkaTopic;
 import com.revify.monolith.commons.models.orders.OrderCreationDTO;
 import com.revify.monolith.commons.models.orders.OrderShipmentParticle;
 import com.revify.monolith.commons.models.orders.OrderShipmentStatus;
+import com.revify.monolith.geo.model.UserGeolocation;
+import com.revify.monolith.geo.service.GeolocationService;
+import com.revify.monolith.items.model.item.Item;
+import com.revify.monolith.items.service.item.ItemReadService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -23,18 +29,32 @@ public class OrderProducer {
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
+    private final ItemReadService itemReadService;
+
+    private final GeolocationService geolocationService;
+
     public void createOrder(Auction auction, Bid bid) {
+        Item item = itemReadService.findById(auction.getItemId());
+        if (item == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found for item: " + auction.getItemId());
+        }
+        //construct particle
+        OrderShipmentParticle.OrderShipmentParticleBuilder builder = OrderShipmentParticle.builder();
+        builder.price(bid.getBidPrice());
+        builder.courierId(bid.getUserId());
+        builder.to(item.getItemDescription().getDestination());
+
+        UserGeolocation latestUserGeolocation = geolocationService.findLatestUserGeolocation(bid.getUserId());
+        if (latestUserGeolocation != null) {
+            builder.from(latestUserGeolocation.getCurrent());
+        }
+        builder.deliveryTimeEstimated(1000L * 60 * 60 * 24 * 7);
+
         kafkaTemplate.send(KafkaTopic.ORDER_MODEL_CREATION, gson.toJson(OrderCreationDTO.builder()
                 .receiverId(auction.getCreatorId())
                 .itemId(auction.getItemId())
                 .deliveryTimeEnd(Instant.now().plus(7, ChronoUnit.DAYS).toEpochMilli())
                 .status(OrderShipmentStatus.CREATED)
-                .shipmentParticle(
-                        OrderShipmentParticle.builder()
-                                .courierId(bid.getUserId())
-                                //todo to-from and time estimation
-                                .price(bid.getBidPrice())
-                                .build()
-                ).build()));
+                .shipmentParticle(builder.build()).build()));
     }
 }
