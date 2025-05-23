@@ -17,8 +17,7 @@ import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Data
 @Builder
@@ -42,7 +41,7 @@ public class Order {
     @NotNull(message = "Shipment particle cannot be null")
     private OrderShipmentParticle shipmentParticle;
 
-    private List<Long> couriersInvolved = new ArrayList<>();
+    private Set<Long> couriersInvolved = new HashSet<>();
 
     @Positive
     @NotNull(message = "Delivery time must persist")
@@ -66,7 +65,6 @@ public class Order {
                 this.shipmentParticle = particle;
             }
 
-            couriersInvolved.removeIf(particle.getCourierId()::equals);
             couriersInvolved.add(particle.getCourierId());
         }
     }
@@ -121,7 +119,7 @@ public class Order {
 
         var currentTime = System.currentTimeMillis();
 
-        Order build = Order.builder()
+        Order build = Order.defaultBuild()
                 .createdAt(currentTime)
                 .updatedAt(currentTime)
                 .status(creationDTO.status())
@@ -133,5 +131,13 @@ public class Order {
 
         build.addShipmentParticle(creationDTO.shipmentParticle());
         return build;
+    }
+
+    public static Order.OrderBuilder defaultBuild() {
+        return Order.builder()
+                .couriersInvolved(new HashSet<>())
+                .isPaid(false)
+                .isSuspended(false)
+                .status(OrderShipmentStatus.CREATED);
     }
 }

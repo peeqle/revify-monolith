@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.revify.monolith.geo.model.Place;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -25,6 +26,9 @@ public class NominatimService {
     private static final Semaphore sema = new Semaphore(5);
 
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+
+    private final MongoTemplate mongoTemplate;
+
 
     //todo read and propose address for input
     public Place readGeolocationAddress(Double latitude, Double longitude) {

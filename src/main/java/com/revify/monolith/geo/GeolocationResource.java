@@ -1,8 +1,7 @@
 package com.revify.monolith.geo;
 
-import com.revify.monolith.geo.model.Place;
+import com.revify.monolith.geo.model.GeoLocation;
 import com.revify.monolith.geo.service.GeolocationService;
-import com.revify.monolith.geo.service.NominatimService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -13,13 +12,11 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class GeolocationResource {
 
-    private final NominatimService nominatimService;
-
     private final GeolocationService geolocationService;
 
     @GetMapping("/resolve")
-    public Place resolve(@RequestParam double lat, @RequestParam double lng) {
-        return nominatimService.readGeolocationAddress(lat, lng);
+    public GeoLocation resolve(@RequestParam double lat, @RequestParam double lng) {
+        return geolocationService.resolveLocation(lat, lng);
     }
 
     @PostMapping("/store")

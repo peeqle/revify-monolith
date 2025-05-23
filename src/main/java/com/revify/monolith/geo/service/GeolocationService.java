@@ -2,19 +2,23 @@ package com.revify.monolith.geo.service;
 
 import com.google.gson.annotations.SerializedName;
 import com.revify.monolith.commons.auth.sync.UserUtils;
-import com.revify.monolith.commons.geolocation.GeoLocation;
-import com.revify.monolith.geo.model.Address;
+import com.revify.monolith.geo.model.GeoLocation;
 import com.revify.monolith.geo.model.Place;
 import com.revify.monolith.geo.model.UserGeolocation;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+
+import static com.revify.monolith.geo.GeolocationUtils.mapGeolocation;
 
 @Service
 @RequiredArgsConstructor
@@ -34,21 +38,40 @@ public class GeolocationService {
                 .query(Criteria.where("userId").is(userId)), UserGeolocation.class);
     }
 
+    public GeoLocation findById(ObjectId geolocationId) {
+        Query query = Query.query(Criteria.where("_id").is(geolocationId));
+        return mongoTemplate.findOne(query, GeoLocation.class);
+    }
+
+    public GeoLocation resolveLocation(Double latitude, Double longitude) {
+        GeoLocation forCoordinates = findForCoordinates(latitude, longitude);
+        if (forCoordinates == null) {
+            Place place = nominatimService.readGeolocationAddress(latitude, longitude);
+            if (place != null) {
+                return mongoTemplate.save(mapGeolocation(place));
+            }
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cannot resolve geolocation for: " + latitude + ", " + longitude);
+        }
+        return forCoordinates;
+    }
+
     public void updateUserGeolocation(Double lat, Double lon) {
         if (lat != null && lon != null) {
             UserGeolocation latestUserGeolocation = findLatestUserGeolocation();
-            if (latestUserGeolocation != null && !latestUserGeolocation.isWorthUpdating(lat, lon)) {
-                return;
+            if (latestUserGeolocation != null) {
+                GeoLocation one = findById(latestUserGeolocation.getGeolocationId());
+                if (one != null && latestUserGeolocation.haversineDistance(lat, lon, one.getLocation().getY(), one.getLocation().getX()) < 5) {
+                    return;
+                }
             }
-            Place place = nominatimService.readGeolocationAddress(lat, lon);
+
+            GeoLocation place = resolveLocation(lat, lon);
 
             if (place != null) {
-                GeoLocation geoLocation = mapGeolocation(place);
-                geoLocation.setLocation(new GeoJsonPoint(lat, lon));
                 if (latestUserGeolocation == null) {
                     latestUserGeolocation = new UserGeolocation();
                 }
-                latestUserGeolocation.setCurrent(geoLocation);
+                latestUserGeolocation.setGeolocationId(place.getId());
                 latestUserGeolocation.setUserId(UserUtils.getUserId());
                 latestUserGeolocation.setTimestamp(Instant.now().toEpochMilli());
                 mongoTemplate.save(latestUserGeolocation);
@@ -56,21 +79,9 @@ public class GeolocationService {
         }
     }
 
-    private static GeoLocation mapGeolocation(Place place) {
-        Address address = place.getAddress();
-
-        GeoLocation geolocation = new GeoLocation();
-        geolocation.setCountryCode(place.getAddress().getCountry_code());
-        geolocation.setCountryName(address.getCountry());
-
-        geolocation.setPlaceName(address.getCity() == null ? address.getVillage() == null ? address.getTown() == null ?
-                "" : address.getTown() : address.getVillage() : address.getCity());
-        geolocation.setPlaceDistrict(address.getRegion());
-        geolocation.setStateName(address.getState());
-
-        geolocation.setDisplayName(place.getDisplay_name());
-
-        return geolocation;
+    public GeoLocation findForCoordinates(Double lat, Double lon) {
+        Query query = Query.query(Criteria.where("location").near(new GeoJsonPoint(lon, lat)));
+        return mongoTemplate.findOne(query, GeoLocation.class);
     }
 
     @Data

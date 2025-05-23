@@ -1,12 +1,15 @@
-package com.revify.monolith.commons.geolocation;
+package com.revify.monolith.geo.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.bson.types.ObjectId;
+import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 import org.springframework.data.mongodb.core.index.GeoSpatialIndexType;
 import org.springframework.data.mongodb.core.index.GeoSpatialIndexed;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Objects;
 
@@ -14,20 +17,24 @@ import java.util.Objects;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+
+@Document("geolocation")
 public class GeoLocation implements Comparable<GeoLocation> {
+    @Id
+    private ObjectId id;
+
     @GeoSpatialIndexed(type = GeoSpatialIndexType.GEO_2DSPHERE)
     private GeoJsonPoint location;
 
     private String stateName;
-
     private String placeDistrict;
     //village, town or city name
     private String placeName;
-
     private String countryCode;
     private String countryName;
-
     private String displayName;
+
+    private Long createdAt;
 
     @Override
     public boolean equals(Object s) {

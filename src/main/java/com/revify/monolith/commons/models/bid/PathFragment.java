@@ -1,6 +1,6 @@
 package com.revify.monolith.commons.models.bid;
 
-import com.revify.monolith.commons.geolocation.GeoLocation;
+import com.revify.monolith.geo.model.GeoLocation;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

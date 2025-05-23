@@ -4,7 +4,6 @@ import com.google.gson.TypeAdapter;
 import com.google.gson.annotations.JsonAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
-import com.revify.monolith.commons.geolocation.GeoLocation;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -31,8 +30,7 @@ public class UserGeolocation implements Serializable {
     @JsonAdapter(UserIdAdapter.class)
     @Indexed(unique = true)
     private Long userId;
-
-    private GeoLocation current;
+    private ObjectId geolocationId;
 
     private Long timestamp;
 
@@ -74,16 +72,5 @@ public class UserGeolocation implements Serializable {
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
     }
-
-    public Boolean isWorthUpdating(UserGeolocation other) {
-        GeoJsonPoint location = this.current.getLocation();
-        return haversineDistance(location.getY(), location.getX(), other.current.getLocation().getY(), other.current.getLocation().getX()) < 5;
-    }
-
-    public Boolean isWorthUpdating(Double latO, Double lonO) {
-        GeoJsonPoint location = this.current.getLocation();
-        return haversineDistance(location.getY(), location.getX(), latO, lonO) < 5;
-    }
-
 }
 

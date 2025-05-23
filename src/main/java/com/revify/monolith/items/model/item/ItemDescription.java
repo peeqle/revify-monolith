@@ -1,7 +1,7 @@
 package com.revify.monolith.items.model.item;
 
 import com.revify.monolith.commons.finance.Price;
-import com.revify.monolith.commons.geolocation.GeoLocation;
+import com.revify.monolith.geo.model.GeoLocation;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

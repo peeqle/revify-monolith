@@ -13,7 +13,6 @@ import lombok.experimental.SuperBuilder;
 public class AppUserDTO extends MicroUserDTO {
     private Long id;
     private String email;
-    private String phoneNumber;
 
     private boolean overrideChange = false;
 
@@ -24,7 +23,6 @@ public class AppUserDTO extends MicroUserDTO {
                 .options(appUser.getAppUserOptions())
                 .email(appUser.getEmail())
                 .id(appUser.getId())
-                .phoneNumber(appUser.getPhoneNumber())
                 .build();
     }
 }

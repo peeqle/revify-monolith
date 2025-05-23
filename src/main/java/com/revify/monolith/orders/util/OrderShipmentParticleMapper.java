@@ -2,7 +2,7 @@ package com.revify.monolith.orders.util;
 
 
 import com.revify.monolith.commons.finance.Price;
-import com.revify.monolith.commons.geolocation.GeoLocation;
+import com.revify.monolith.geo.model.GeoLocation;
 import com.revify.monolith.commons.models.orders.OrderShipmentParticle;
 
 public class OrderShipmentParticleMapper {

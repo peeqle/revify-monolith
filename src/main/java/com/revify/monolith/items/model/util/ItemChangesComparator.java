@@ -1,13 +1,10 @@
 package com.revify.monolith.items.model.util;
 
 
-import com.revify.monolith.commons.geolocation.GeoLocation;
+import com.revify.monolith.geo.model.GeoLocation;
 import com.revify.monolith.commons.items.ItemDescriptionDTO;
 import com.revify.monolith.items.model.item.ItemDescription;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
-
-import java.util.Comparator;
-import java.util.Objects;
 
 import static com.revify.monolith.items.model.util.ComparisonUtils.*;
 

@@ -2,7 +2,7 @@ package com.revify.monolith.items.model.util;
 
 
 import com.revify.monolith.commons.finance.Price;
-import com.revify.monolith.commons.geolocation.GeoLocation;
+import com.revify.monolith.geo.model.GeoLocation;
 
 public class ComparisonUtils {
     public static int compareNullableStrings(String s1, String s2) {

@@ -1,6 +1,6 @@
 package com.revify.monolith.commons.items;
 
-import com.revify.monolith.commons.geolocation.GeoLocation;
+import com.revify.monolith.geo.model.GeoLocation;
 
 import java.math.BigDecimal;
 

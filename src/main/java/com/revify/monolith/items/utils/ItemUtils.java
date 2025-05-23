@@ -1,7 +1,7 @@
 package com.revify.monolith.items.utils;
 
 import com.revify.monolith.commons.finance.Price;
-import com.revify.monolith.commons.geolocation.GeoLocation;
+import com.revify.monolith.geo.model.GeoLocation;
 import com.revify.monolith.commons.items.ItemCreationDTO;
 import com.revify.monolith.commons.items.ItemDTO;
 import com.revify.monolith.commons.items.ItemDescriptionDTO;
