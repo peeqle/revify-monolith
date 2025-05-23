@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.revify.monolith.bid.models.Auction;
 import com.revify.monolith.bid.models.Bid;
 import com.revify.monolith.commons.messaging.KafkaTopic;
+import com.revify.monolith.commons.models.orders.OrderAdditionalStatus;
 import com.revify.monolith.commons.models.orders.OrderCreationDTO;
 import com.revify.monolith.commons.models.orders.OrderShipmentParticle;
 import com.revify.monolith.commons.models.orders.OrderShipmentStatus;
@@ -55,6 +56,7 @@ public class OrderProducer {
                 .itemId(auction.getItemId())
                 .deliveryTimeEnd(Instant.now().plus(7, ChronoUnit.DAYS).toEpochMilli())
                 .status(OrderShipmentStatus.CREATED)
+                .additionalStatus(OrderAdditionalStatus.CLIENT_PAYMENT_AWAIT)
                 .shipmentParticle(builder.build()).build()));
     }
 }
