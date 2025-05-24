@@ -1,5 +1,7 @@
 package com.revify.monolith.commons.messaging.dto.finance;
 
+import com.revify.monolith.commons.models.user.UserRole;
+import com.revify.monolith.user.models.user.AppUser;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,7 +12,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RecipientCreation {
-    private String userId;
+    private Long userId;
     private String username;
     private String email;
     private String phone;
@@ -22,4 +24,24 @@ public class RecipientCreation {
     private Long dobYear;
 
     private String countryCode;
+    private String currency;
+
+    private UserRole userRole;
+
+    public static RecipientCreation from(AppUser appUser) {
+        return RecipientCreation.builder()
+                .userId(appUser.getId())
+                .username(appUser.getUsername())
+                .email(appUser.getEmail())
+                .phone(appUser.getPhoneNumber())
+                .firstName(appUser.getFirstName())
+                .lastName(appUser.getLastName())
+                .dobDay(10L)
+                .dobMonth(2L)
+                .dobYear(2000L)
+                .countryCode(appUser.getAppUserOptions().getResidence().getIsoCode())
+                .currency(appUser.getAppUserOptions().getPreferedCurrency().getName())
+                .userRole(appUser.getClientUserRole())
+                .build();
+    }
 }

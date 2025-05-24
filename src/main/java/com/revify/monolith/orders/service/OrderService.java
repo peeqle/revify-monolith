@@ -45,6 +45,22 @@ public class OrderService {
     //todo remove and use direct, when normal integration utils arise
     private final FanoutNotificationProducer notificationProducer;
 
+    public Order createOrder(OrderCreationDTO orderDto) {
+        Order newOrder = mongoTemplate.save(Order.from(orderDto));
+        if (newOrder.getId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order creation failed");
+        }
+        sendFanoutNotification(
+                "Order Created",
+                "Order ID: " + newOrder.getId().toHexString() + " created."
+        );
+
+        if(newOrder.getAdditionalStatus() == OrderAdditionalStatus.CLIENT_PAYMENT_AWAIT) {
+
+        }
+        return newOrder;
+    }
+
     public List<Order> getUserOrders(Integer offset, Integer limit) {
         Criteria criteria = Criteria.where("isSuspended").is(false);
 
@@ -58,18 +74,6 @@ public class OrderService {
         return mongoTemplate.find(Query.query(criteria)
                         .with(Sort.by(Sort.Direction.ASC, "deliveryTimeEnd"))
                 .skip((long) offset*limit).limit(limit), Order.class);
-    }
-
-    public Order createOrder(OrderCreationDTO orderDto) {
-        Order newOrder = mongoTemplate.save(Order.from(orderDto));
-        if (newOrder.getId() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order creation failed");
-        }
-        sendFanoutNotification(
-                "Order Created",
-                "Order ID: " + newOrder.getId().toHexString() + " created."
-        );
-        return newOrder;
     }
 
     //better create unified service for deps like write->read, to escape future circular and for the most part stay in cqrs

@@ -68,12 +68,8 @@ public class ItemReadService {
     }
 
     public List<Item> findForUserDestination(Integer offset, Integer limit, Double latitude, Double longitude, Double distance) {
-        Criteria criteria = removeBlockedByCreatorsCriteria();
-
-        Query query = new Query()
+        Query query = genericItemQuery()
                 .addCriteria(filterByGeolocation(latitude, longitude, distance))
-                .addCriteria(Criteria.where("isPicked").is(false))
-                .addCriteria(criteria)
                 .skip((long) offset * limit)
                 .limit(limit);
         return mongoTemplate.find(query, Item.class);
@@ -82,9 +78,8 @@ public class ItemReadService {
     public Long countForLocationRemovingBlockedBy(Double latitude, Double longitude, Double distance) {
         Criteria criteria = removeBlockedByCreatorsCriteria();
 
-        Query query = new Query()
+        Query query = genericItemQuery()
                 .addCriteria(filterByGeolocation(latitude, longitude, distance))
-                .addCriteria(Criteria.where("isPicked").is(false))
                 .addCriteria(criteria);
         return mongoTemplate.count(query, Item.class);
     }
@@ -96,5 +91,13 @@ public class ItemReadService {
 
     public Criteria removeBlockedByCreatorsCriteria() {
         return Criteria.where("creatorId").not().in(readUserService.findAllBlockedBy(UserUtils.getUserId()));
+    }
+
+    private Query genericItemQuery() {
+        Criteria criteria = removeBlockedByCreatorsCriteria();
+        return new Query()
+                .addCriteria(Criteria.where("isPicked").is(false))
+                .addCriteria(Criteria.where("isActive").is(true))
+                .addCriteria(criteria);
     }
 }

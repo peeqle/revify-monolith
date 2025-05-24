@@ -6,7 +6,6 @@ import com.revify.monolith.bid.models.Bid;
 import com.revify.monolith.commons.auth.sync.UserUtils;
 import com.revify.monolith.commons.models.bid.BidCreationRequest;
 import com.revify.monolith.currency_reader.service.CurrencyService;
-import com.revify.monolith.items.model.item.Item;
 import com.revify.monolith.items.service.item.ItemReadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -169,6 +168,9 @@ public class ManagementService {
         Auction auction = auctionService.closeAuction(auctionId);
         if (auction == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found for item: " + auctionId);
+        }
+        if (!auction.getIsActive()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Auction is in active state");
         }
 
         Bid bid = findById(selectedBid);

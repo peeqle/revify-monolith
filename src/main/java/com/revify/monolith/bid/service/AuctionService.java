@@ -97,7 +97,10 @@ public class AuctionService {
     }
 
     public Auction closeAuction(ObjectId auctionId) {
-        Auction auction = findAuctionByIdAndUser(auctionId);
+        Query query = Query.query(Criteria.where("id").is(auctionId)
+                        .and("isActive").is(true)
+                .and("creatorId").is(UserUtils.getUserId()));
+        Auction auction = mongoTemplate.findOne(query, Auction.class);
         if (auction == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found with ID: " + auctionId);
         }

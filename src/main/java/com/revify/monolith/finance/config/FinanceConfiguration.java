@@ -17,11 +17,11 @@ public class FinanceConfiguration {
 
     @Bean
     public PaymentService<?> globalPaymentProcessor() {
-        if (paymentProcessingProperties.getGlobal().equals(PaymentProcessor.BE_PAID.getServiceName())) {
+        if (paymentProcessingProperties.getProcessors().global().equals(PaymentProcessor.BE_PAID.getServiceName())) {
             return new BePaidPaymentServiceService();
-        } else if (paymentProcessingProperties.getGlobal().equals(PaymentProcessor.STRIPE.getServiceName())) {
+        } else if (paymentProcessingProperties.getProcessors().global().equals(PaymentProcessor.STRIPE.getServiceName())) {
             return new StripePaymentServiceService();
-        } else if (paymentProcessingProperties.getGlobal().equals(PaymentProcessor.BANK_PROCESSING.getServiceName())) {
+        } else if (paymentProcessingProperties.getProcessors().global().equals(PaymentProcessor.BANK_PROCESSING.getServiceName())) {
             throw new UnsupportedOperationException("Bank is not currently supported");
         }
 

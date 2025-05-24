@@ -1,3 +1,7 @@
 payment:
   processors:
-    global: bePaid
+    global: stripe
+  credentials:
+    stripe:
+      pub: ${STRIPE_PUB_KEY:pk_test_51RSDf9B61dp8xTjyVJ852ZhrU56hgzCWfUlMcZMk8wW9ZIhcjb0SuWiueCbzaV3ZlMIRAftzFhm233aLszxV6M3o006u16pUkp}
+      sec: ${STRIPE_SEC_KEY:sk_test_51RSDf9B61dp8xTjy1oNnNSjFQaF1tJxVI5uW8Ypmd0cOWhjyKMIj5xzRAq4w1deMMbURZpCCbomVKdxApYshjyb400LbGkT7De}

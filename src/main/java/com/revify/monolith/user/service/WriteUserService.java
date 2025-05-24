@@ -3,6 +3,8 @@ package com.revify.monolith.user.service;
 import com.revify.monolith.commons.ValidationContext;
 import com.revify.monolith.commons.exceptions.UserCreationException;
 import com.revify.monolith.commons.exceptions.UserPersistenceException;
+import com.revify.monolith.commons.messaging.KafkaTopic;
+import com.revify.monolith.commons.messaging.dto.finance.RecipientCreation;
 import com.revify.monolith.commons.models.DTO.AppUserDTO;
 import com.revify.monolith.commons.models.user.RegisterRequest;
 import com.revify.monolith.keycloak.KeycloakService;
@@ -15,15 +17,17 @@ import com.revify.monolith.user.service.phone_messaging.PhoneInteractionService;
 import com.revify.monolith.user.service.util.UserValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.units.qual.A;
 import org.springframework.core.env.Environment;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Objects;
@@ -36,8 +40,6 @@ import java.util.Queue;
 @RequiredArgsConstructor
 public class WriteUserService extends CrudService<AppUser> {
 
-    private final Environment env;
-
     private final AppUserWriteRepository repository;
 
     private final UserValidator userValidator;
@@ -46,8 +48,11 @@ public class WriteUserService extends CrudService<AppUser> {
 
     private final PhoneInteractionService phoneInteractionService;
 
-    private final Queue<ServiceTask> serviceTaskQueue = new PriorityQueue<>((a, b) -> Math.toIntExact(a.getCreatedAt() - b.getCreatedAt()));
     private final AppUserWriteRepository appUserWriteRepository;
+
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+
+    private final Queue<ServiceTask> serviceTaskQueue = new PriorityQueue<>((a, b) -> Math.toIntExact(a.getCreatedAt() - b.getCreatedAt()));
 
     @Async
     @Scheduled(cron = "0 0 * * * *")
@@ -62,11 +67,9 @@ public class WriteUserService extends CrudService<AppUser> {
 
     @Transactional
     public AppUser tryCreateUser(RegisterRequest registerRequest) {
-        if (env.matchesProfiles("prod | stage")) {
-            List<ValidationContext> validationContext = userValidator.validateRequest(registerRequest);
-            if (!validationContext.isEmpty()) {
-                throw new RuntimeException("Validation error: " + validationContext);
-            }
+        List<ValidationContext> validationContext = userValidator.validateRequest(registerRequest);
+        if (!validationContext.isEmpty()) {
+            throw new ValidationException(validationContext);
         }
 
         AppUser storedUser = store(mapUser(registerRequest));
@@ -79,7 +82,11 @@ public class WriteUserService extends CrudService<AppUser> {
             String keycloakId = keycloakService.registerUser(registerRequest);
             storedUser.setKeycloakId(keycloakId);
 
-            return updateUser(storedUser.getId(), storedUser);
+            storedUser = updateUser(storedUser.getId(), storedUser);
+            if (storedUser != null) {
+                kafkaTemplate.send(KafkaTopic.RECIPIENT_CREATION, RecipientCreation.from(storedUser));
+            }
+            return storedUser;
         } catch (Exception e) {
             deleteUser(storedUser.getId());
             throw new RuntimeException("Timeout while creating Keycloak user.", e);

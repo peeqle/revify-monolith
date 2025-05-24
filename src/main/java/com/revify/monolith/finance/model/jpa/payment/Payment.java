@@ -50,4 +50,7 @@ public class Payment implements Serializable {
     private Long createdAt;
 
     private Long executedAt;
+
+    @Column(nullable = false)
+    private String orderId;
 }

@@ -28,5 +28,4 @@ public class UserValidator {
         }
         return validationContextList;
     }
-
 }

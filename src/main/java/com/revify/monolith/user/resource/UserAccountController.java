@@ -13,6 +13,7 @@ import com.revify.monolith.user.models.MicroUserDTO;
 import com.revify.monolith.user.models.user.AppUser;
 import com.revify.monolith.user.service.ReadUserService;
 import com.revify.monolith.user.service.UserService;
+import com.revify.monolith.user.service.ValidationException;
 import com.revify.monolith.user.service.WriteUserService;
 import com.revify.monolith.user.service.phone_messaging.PhoneInteractionService;
 import com.revify.monolith.user.service.util.RequestValidator;
@@ -55,11 +56,8 @@ public class UserAccountController {
             } catch (UserCreationException e) {
                 log.warn("User creation exception: {}", registerRequest.getUsername(), e);
                 return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body("User cannot be created");
-            } catch (RuntimeException e) {
-                log.warn("User creation exception: {}", registerRequest.getUsername(), e);
-            } catch (Exception e) {
-                log.warn("User creation exception: {}", registerRequest.getUsername(), e);
-                return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body("User cannot be created");
+            }catch (ValidationException e) {
+                return ResponseEntity.badRequest().body(e.getValidationContexts());
             }
         }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();

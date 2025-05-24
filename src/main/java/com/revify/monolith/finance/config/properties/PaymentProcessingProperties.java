@@ -11,7 +11,18 @@ import org.springframework.stereotype.Component;
 @AllArgsConstructor
 @NoArgsConstructor
 
-@ConfigurationProperties(prefix = "payment.processors")
+@ConfigurationProperties(prefix = "payment")
 public class PaymentProcessingProperties {
-    private String global;
+    private Processors processors;
+
+    private Providers credentials;
+
+    public record Processors(String global) {
+    }
+
+    public record Providers(Credentials stripe, Credentials bePaid) {
+    }
+
+    public record Credentials(String pub, String sec) {
+    }
 }

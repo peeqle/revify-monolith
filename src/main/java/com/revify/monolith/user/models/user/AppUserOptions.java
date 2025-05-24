@@ -1,5 +1,6 @@
 package com.revify.monolith.user.models.user;
 
+import com.revify.monolith.commons.finance.Currency;
 import com.revify.monolith.commons.geolocation.CountryCode;
 import com.revify.monolith.user.models.user.additional.Locale;
 import com.revify.monolith.user.models.user.additional.rating.UserRating;
@@ -21,4 +22,6 @@ public class AppUserOptions implements Serializable {
     private CountryCode residence;
 
     private UserRating userRating;
+
+    private Currency preferedCurrency = Currency.USD;
 }
