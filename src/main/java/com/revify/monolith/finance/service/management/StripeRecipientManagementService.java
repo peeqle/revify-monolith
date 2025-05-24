@@ -6,10 +6,11 @@ import com.revify.monolith.finance.RecipientProcessor;
 import com.revify.monolith.finance.config.properties.PaymentProcessingProperties;
 import com.revify.monolith.finance.model.exc.PaymentServiceInitializationException;
 import com.stripe.Stripe;
-import com.stripe.exception.*;
 import com.stripe.model.Account;
+import com.stripe.model.Customer;
 import com.stripe.model.PaymentMethod;
 import com.stripe.param.AccountCreateParams;
+import com.stripe.param.CustomerCreateParams;
 import com.stripe.param.PaymentMethodAttachParams;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -17,12 +18,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Map;
 
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class StripeRecipientManagementService implements RecipientProcessor<Account> {
+public class StripeRecipientManagementService implements RecipientProcessor<Customer, Account> {
 
     private final PaymentProcessingProperties paymentProcessingProperties;
 
@@ -42,8 +44,38 @@ public class StripeRecipientManagementService implements RecipientProcessor<Acco
     }
 
     @Override
-    public Account register(RecipientCreation recipientCreation) {
-        AccountCreateParams params = AccountCreateParams.builder()
+    public Customer registerCustomer(RecipientCreation recipientCreation) {
+
+        CustomerCreateParams customerCreateParams = CustomerCreateParams.builder()
+                .setEmail(recipientCreation.getEmail())
+                .setName(recipientCreation.getFirstName() + " " + recipientCreation.getLastName())
+                .setBalance(0L)
+                .setAddress(CustomerCreateParams.Address.builder()
+                        .setCountry(recipientCreation.getCountryCode())
+                        .setState(recipientCreation.getRegion())
+                        .setCity(recipientCreation.getCity())
+                        .setCountry(recipientCreation.getCountryCode())
+                        .setPostalCode(recipientCreation.getPostalCode())
+                        .build())
+                .setPhone(recipientCreation.getPhone())
+                .setTax(CustomerCreateParams.Tax.builder()
+                        .setIpAddress(recipientCreation.getIp())
+                        .setValidateLocation(CustomerCreateParams.Tax.ValidateLocation.DEFERRED)
+                        .build())
+                .putAllMetadata(Map.of("userId", recipientCreation.getUserId().toString()))
+                .build();
+
+        try {
+            return Customer.create(customerCreateParams);
+        } catch (Exception e) {
+            // Something else happened, completely unrelated to Stripe
+        }
+        throw new RuntimeException("Failed to create customer " + recipientCreation.getEmail());
+    }
+
+    @Override
+    public Account registerCourier(RecipientCreation recipientCreation) {
+        AccountCreateParams accountCreateParams = AccountCreateParams.builder()
                 .setType(AccountCreateParams.Type.CUSTOM)
                 .setEmail(recipientCreation.getEmail())
                 .setCountry(recipientCreation.getCountryCode())
@@ -65,8 +97,6 @@ public class StripeRecipientManagementService implements RecipientProcessor<Acco
                                 .setPostalCode(recipientCreation.getPostalCode())
                                 .build())
                         .build())
-
-
                 .setCapabilities(AccountCreateParams.Capabilities.builder()
                         .setTransfers(AccountCreateParams.Capabilities.Transfers.builder()
                                 .setRequested(true)
@@ -74,32 +104,19 @@ public class StripeRecipientManagementService implements RecipientProcessor<Acco
                         .build())
                 .setTosAcceptance(AccountCreateParams.TosAcceptance.builder()
                         .setIp(recipientCreation.getIp())
-                        .setDate(Instant.now().toEpochMilli())
+                        .setDate(Instant.now().getEpochSecond())
                         .setUserAgent(recipientCreation.getBrowserAccess())
-                        .setServiceAgreement("DEFAULT")
+                        .setServiceAgreement("recipient")
                         .build())
                 .build();
 
 
         try {
-            return Account.create(params);
-        } catch (CardException e) {
-            // Since it's a decline, CardException will be caught
-            System.out.println("Status is: " + e.getCode());
-            System.out.println("Message is: " + e.getMessage());
-        } catch (RateLimitException e) {
-            // Too many requests made to the API too quickly
-        } catch (InvalidRequestException e) {
-            // Invalid parameters were supplied to Stripe's API
-        } catch (AuthenticationException e) {
-            // Authentication with Stripe's API failed
-            // (maybe you changed API keys recently)
-        } catch (StripeException e) {
-            // Display a very generic error to the user, and maybe send
-            // yourself an email
+            return Account.create(accountCreateParams);
         } catch (Exception e) {
             // Something else happened, completely unrelated to Stripe
         }
+
         return null;
     }
 

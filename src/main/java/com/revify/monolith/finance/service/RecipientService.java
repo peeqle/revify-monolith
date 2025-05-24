@@ -3,6 +3,7 @@ package com.revify.monolith.finance.service;
 
 import com.revify.monolith.commons.exceptions.UnauthorizedAccessError;
 import com.revify.monolith.commons.messaging.dto.finance.RecipientCreation;
+import com.revify.monolith.commons.models.user.UserRole;
 import com.revify.monolith.finance.RecipientProcessor;
 import com.revify.monolith.finance.model.dto.RecipientTokenDTO;
 import com.revify.monolith.finance.model.jpa.PaymentSystemAccount;
@@ -12,6 +13,7 @@ import com.revify.monolith.finance.service.management.PaymentServiceResolver;
 import com.revify.monolith.finance.service.repository.RecipientAccountRepository;
 import com.revify.monolith.finance.service.repository.StripePaymentSystemRepository;
 import com.stripe.model.Account;
+import com.stripe.model.Customer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -60,7 +62,7 @@ public class RecipientService {
 
     @Transactional
     public void registerRecipientToken(RecipientTokenDTO recipientTokenDTO) {
-        RecipientProcessor<?> recipientProcessor = paymentServiceResolver.resolveService(recipientTokenDTO.getPaymentProcessor());
+        RecipientProcessor<?, ?> recipientProcessor = paymentServiceResolver.resolveService(recipientTokenDTO.getPaymentProcessor());
         if (recipientProcessor == null) {
             throw new UnsupportedOperationException(recipientTokenDTO.getPaymentProcessor() + " is not supported");
         }
@@ -85,32 +87,40 @@ public class RecipientService {
         if (recipientCreation == null) {
             throw new IllegalArgumentException("Recipient creation cannot be null");
         }
-        RecipientProcessor<?> recipientProcessor = paymentServiceResolver.resolveServiceByCountry(recipientCreation.getCountryCode());
+        RecipientProcessor<?, ?> recipientProcessor = paymentServiceResolver.resolveServiceByCountry(recipientCreation.getCountryCode());
         if (recipientProcessor == null) {
             throw new UnsupportedOperationException(recipientCreation.getCountryCode() + " is not supported");
         }
 
-        Object register = recipientProcessor.register(recipientCreation);
+        if (recipientCreation.getUserRole().equals(UserRole.CLIENT)) {
+            Object registeredCustomer = recipientProcessor.registerCustomer(recipientCreation);
 
-        if (register instanceof Account account) {
-            StripePaymentSystemAccount stripePaymentSystemAccount = new StripePaymentSystemAccount();
-            stripePaymentSystemAccount.setAccountId(account.getId());
-            stripePaymentSystemAccount.setFirstName(account.getIndividual().getFirstName());
-            stripePaymentSystemAccount.setLastName(account.getIndividual().getLastName());
-            stripePaymentSystemAccount.setEmail(account.getIndividual().getEmail());
+            if (registeredCustomer instanceof Customer customer) {
 
-            PaymentSystemAccount.Address address = new PaymentSystemAccount.Address();
-            address.setCity(account.getIndividual().getAddress().getCity());
-            address.setCountry(account.getIndividual().getAddress().getCountry());
-            address.setPostalCode(account.getIndividual().getAddress().getPostalCode());
-            address.setAddressLine(account.getIndividual().getAddress().getLine1() + " " + account.getIndividual().getAddress().getLine2());
+            }
+        } else {
+            Object registeredCourier = recipientProcessor.registerCourier(recipientCreation);
 
-            stripePaymentSystemAccount.setAddress(address);
-            stripePaymentSystemAccount.setIsDeleted(account.getDeleted() != null && account.getDeleted());
-            stripePaymentSystemAccount.setIsActive(account.getDeleted() == null || !account.getDeleted());
+            if (registeredCourier instanceof Account account) {
+                StripePaymentSystemAccount stripePaymentSystemAccount = new StripePaymentSystemAccount();
+                stripePaymentSystemAccount.setAccountId(account.getId());
+                stripePaymentSystemAccount.setFirstName(account.getIndividual().getFirstName());
+                stripePaymentSystemAccount.setLastName(account.getIndividual().getLastName());
+                stripePaymentSystemAccount.setEmail(account.getIndividual().getEmail());
 
-            stripePaymentSystemAccount.setCreatedAt(account.getCreated());
-            stripePaymentSystemRepository.save(stripePaymentSystemAccount);
+                PaymentSystemAccount.Address address = new PaymentSystemAccount.Address();
+                address.setCity(account.getIndividual().getAddress().getCity());
+                address.setCountry(account.getIndividual().getAddress().getCountry());
+                address.setPostalCode(account.getIndividual().getAddress().getPostalCode());
+                address.setAddressLine(account.getIndividual().getAddress().getLine1() + " " + account.getIndividual().getAddress().getLine2());
+
+                stripePaymentSystemAccount.setAddress(address);
+                stripePaymentSystemAccount.setIsDeleted(account.getDeleted() != null && account.getDeleted());
+                stripePaymentSystemAccount.setIsActive(account.getDeleted() == null || !account.getDeleted());
+
+                stripePaymentSystemAccount.setCreatedAt(account.getCreated());
+                stripePaymentSystemRepository.save(stripePaymentSystemAccount);
+            }
         }
     }
 }
