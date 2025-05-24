@@ -25,7 +25,6 @@ public class RecipientCreation {
     private Long dobMonth;
     private Long dobYear;
 
-    private String residenceCountryCode;
     private String countryCode;
     private String city;
     private String street;
@@ -55,7 +54,6 @@ public class RecipientCreation {
                 .dobMonth(2L)
                 .dobYear(2000L)
 
-                .residenceCountryCode(appUserOptions.getResidence().getIsoCode())
                 .countryCode(CountryCode.getCountryCode(appUserOptions.getAddress().country()).getIsoCode())
                 .region(appUserOptions.getAddress().region())
                 .city(appUserOptions.getAddress().city())

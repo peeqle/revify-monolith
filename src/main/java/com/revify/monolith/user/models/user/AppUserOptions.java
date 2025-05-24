@@ -28,5 +28,5 @@ public class AppUserOptions implements Serializable {
 
     private Address address;
 
-    public record Address(String street, String city, String region, String postal, String apartment, String country) {}
+    public record Address(String street, String city, String region, String postal, String apartment, String country) implements Serializable {}
 }
