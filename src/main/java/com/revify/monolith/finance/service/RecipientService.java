@@ -82,6 +82,9 @@ public class RecipientService {
      */
     @Transactional
     public void registerRecipient(RecipientCreation recipientCreation) throws Exception {
+        if (recipientCreation == null) {
+            throw new IllegalArgumentException("Recipient creation cannot be null");
+        }
         RecipientProcessor<?> recipientProcessor = paymentServiceResolver.resolveServiceByCountry(recipientCreation.getCountryCode());
         if (recipientProcessor == null) {
             throw new UnsupportedOperationException(recipientCreation.getCountryCode() + " is not supported");
@@ -103,8 +106,8 @@ public class RecipientService {
             address.setAddressLine(account.getIndividual().getAddress().getLine1() + " " + account.getIndividual().getAddress().getLine2());
 
             stripePaymentSystemAccount.setAddress(address);
-            stripePaymentSystemAccount.setIsDeleted(account.getDeleted());
-            stripePaymentSystemAccount.setIsActive(!account.getDeleted());
+            stripePaymentSystemAccount.setIsDeleted(account.getDeleted() != null && account.getDeleted());
+            stripePaymentSystemAccount.setIsActive(account.getDeleted() == null || !account.getDeleted());
 
             stripePaymentSystemAccount.setCreatedAt(account.getCreated());
             stripePaymentSystemRepository.save(stripePaymentSystemAccount);

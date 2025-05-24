@@ -17,6 +17,7 @@ import com.revify.monolith.user.service.ValidationException;
 import com.revify.monolith.user.service.WriteUserService;
 import com.revify.monolith.user.service.phone_messaging.PhoneInteractionService;
 import com.revify.monolith.user.service.util.RequestValidator;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -43,8 +44,10 @@ public class UserAccountController {
     private final PhoneInteractionService phoneInteractionService;
 
     @PostMapping("/create")
-    public ResponseEntity<?> createUserAccount(@RequestBody RegisterRequest registerRequest) {
+    public ResponseEntity<?> createUserAccount(@RequestBody RegisterRequest registerRequest, HttpServletRequest request) {
         if (registerRequest != null) {
+            registerRequest.setIp(request.getRemoteAddr());
+            registerRequest.setBrowserAccess(request.getHeader("User-Agent"));
             try {
                 AppUser appUser = writeUserService.tryCreateUser(registerRequest);
 

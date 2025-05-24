@@ -1,5 +1,7 @@
 package com.revify.monolith.finance.messaging;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.revify.monolith.commons.messaging.ConsumerGroups;
 import com.revify.monolith.commons.messaging.dto.finance.RecipientCreation;
 import com.revify.monolith.finance.service.RecipientService;
@@ -22,17 +24,18 @@ public class RecipientConsumer {
 
     private final RecipientService recipientService;
 
+    private final Gson gson = new GsonBuilder().create();
+
     @Retryable(
             retryFor = {Exception.class},
-            maxAttempts = 3,
             backoff = @Backoff(delay = 10000, multiplier = 2.0)
     )
     @KafkaListener(topics = RECIPIENT_CREATION, groupId = ConsumerGroups.RECIPIENTS, containerFactory = "recipientKafkaListenerContainerFactory")
-    public void listen(ConsumerRecord<String, RecipientCreation> record, Acknowledgment acknowledgment) throws Exception {
+    public void listen(ConsumerRecord<String, String> record) throws Exception {
         try {
+            RecipientCreation recipientCreation = gson.fromJson(record.value(), RecipientCreation.class);
             log.info("Received record: {}", record);
-            recipientService.registerRecipient(record.value());
-            acknowledgment.acknowledge();
+            recipientService.registerRecipient(recipientCreation);
         } catch (Exception e) {
             log.warn("Cannot process recipient creation request {}", e);
             throw e;

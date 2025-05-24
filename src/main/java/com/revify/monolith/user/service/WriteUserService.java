@@ -1,5 +1,7 @@
 package com.revify.monolith.user.service;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.revify.monolith.commons.ValidationContext;
 import com.revify.monolith.commons.exceptions.UserCreationException;
 import com.revify.monolith.commons.exceptions.UserPersistenceException;
@@ -12,6 +14,7 @@ import com.revify.monolith.keycloak.KeycloakService;
 import com.revify.monolith.user.models.UserActionTaskStatus;
 import com.revify.monolith.user.models.user.AppUser;
 import com.revify.monolith.user.models.user.AppUserOptions;
+import com.revify.monolith.user.models.user.SystemInformation;
 import com.revify.monolith.user.models.user.additional.rating.UserRating;
 import com.revify.monolith.user.service.data.AppUserWriteRepository;
 import com.revify.monolith.user.service.phone_messaging.PhoneInteractionService;
@@ -48,9 +51,11 @@ public class WriteUserService extends CrudService<AppUser> {
 
     private final AppUserWriteRepository appUserWriteRepository;
 
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
     private final Queue<ServiceTask> serviceTaskQueue = new PriorityQueue<>((a, b) -> Math.toIntExact(a.getCreatedAt() - b.getCreatedAt()));
+
+    private final Gson gson = new GsonBuilder().create();
 
     @Async
     @Scheduled(cron = "0 0 * * * *")
@@ -69,20 +74,18 @@ public class WriteUserService extends CrudService<AppUser> {
         if (!validationContext.isEmpty()) {
             throw new ValidationException(validationContext);
         }
-
         AppUser storedUser = store(mapUser(registerRequest));
         if (storedUser == null) {
             throw new UserCreationException("Failed to store user in service database.");
         }
 
         try {
-            registerRequest.setUserId(storedUser.getId());
-            String keycloakId = keycloakService.registerUser(registerRequest);
+            String keycloakId = keycloakService.registerUser(storedUser, registerRequest.getPassword());
             storedUser.setKeycloakId(keycloakId);
 
             storedUser = updateUser(storedUser.getId(), storedUser);
             if (storedUser != null) {
-                kafkaTemplate.send(KafkaTopic.RECIPIENT_CREATION, RecipientCreation.from(storedUser));
+                kafkaTemplate.send(KafkaTopic.RECIPIENT_CREATION, gson.toJson(RecipientCreation.from(storedUser)));
             }
             return storedUser;
         } catch (Exception e) {
@@ -149,7 +152,17 @@ public class WriteUserService extends CrudService<AppUser> {
         AppUserOptions appUserOptions = new AppUserOptions();
         appUserOptions.setUserRating(UserRating.defaultRating());
         appUserOptions.setResidence(CountryCode.getCountryCode(registerRequest.getResidence()));
+        appUserOptions.setAddress(new AppUserOptions.Address(registerRequest.getStreet(),
+                registerRequest.getCity(),
+                registerRequest.getRegion(),
+                registerRequest.getPostalCode(),
+                registerRequest.getApartmentHouse(),
+                registerRequest.getCountry()));
         appUser.setAppUserOptions(appUserOptions);
+
+        SystemInformation systemInformation = new SystemInformation();
+        systemInformation.setIp(registerRequest.getIp());
+        appUser.setSystemInformation(systemInformation);
 
         return appUser;
     }
@@ -157,11 +170,8 @@ public class WriteUserService extends CrudService<AppUser> {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void deleteUser(Long userId) {
         try {
-            if (keycloakService.deleteUser(userId)) {
-                appUserWriteRepository.deleteById(userId);
-            }else {
-                throw new Exception("Keycloak user not found with ID: " + userId);
-            }
+            keycloakService.deleteUser(userId);
+            appUserWriteRepository.deleteById(userId);
         } catch (Exception e) {
             log.warn("Cannot delete user {}", userId);
             serviceTaskQueue.add(UserActionServiceTask.builder()

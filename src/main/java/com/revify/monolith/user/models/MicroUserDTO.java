@@ -19,7 +19,7 @@ public class MicroUserDTO {
     private String displayName;
     private UserRole userRole;
 
-    private AppUserOptions options;
+    private MicroUserOptionsDTO options;
 
     public static MicroUserDTO from(AppUser user) {
         return MicroUserDTO.builder()
@@ -27,7 +27,7 @@ public class MicroUserDTO {
                 .username(user.getUsername())
                 .userRole(user.getClientUserRole())
                 .displayName(user.getCommonUserName())
-                .options(user.getAppUserOptions())
+                .options(MicroUserOptionsDTO.from(user.getAppUserOptions()))
                 .build();
     }
 }

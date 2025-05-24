@@ -56,8 +56,10 @@ public class AppUser {
 
     @Cascade(org.hibernate.annotations.CascadeType.ALL)
     private AppUserOptions appUserOptions = new AppUserOptions();
-
+    @Cascade(org.hibernate.annotations.CascadeType.ALL)
     private FinancialInformation financialInformation = new FinancialInformation();
+    @Cascade(org.hibernate.annotations.CascadeType.ALL)
+    private SystemInformation systemInformation = new SystemInformation();
 
     private Long createdOnServerUtc = System.currentTimeMillis();
     private Long updatedOnServerUtc = System.currentTimeMillis();

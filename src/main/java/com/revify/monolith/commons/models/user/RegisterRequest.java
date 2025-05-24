@@ -17,4 +17,13 @@ public class RegisterRequest {
     private String email;
     private String password;
     private String residence;
+    private String country;
+    private String city;
+    private String street;
+    private String region;
+    private String postalCode;
+    private String apartmentHouse;
+
+    private String ip;
+    private String browserAccess;
 }

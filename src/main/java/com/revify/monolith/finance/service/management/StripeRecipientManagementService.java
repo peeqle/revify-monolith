@@ -16,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+
 
 @Slf4j
 @Service
@@ -47,6 +49,7 @@ public class StripeRecipientManagementService implements RecipientProcessor<Acco
                 .setCountry(recipientCreation.getCountryCode())
                 .setBusinessType(AccountCreateParams.BusinessType.INDIVIDUAL)
                 .setIndividual(AccountCreateParams.Individual.builder()
+                        .setPhone(recipientCreation.getPhone())
                         .setFirstName(recipientCreation.getFirstName())
                         .setLastName(recipientCreation.getLastName())
                         .setDob(AccountCreateParams.Individual.Dob.builder()
@@ -54,11 +57,26 @@ public class StripeRecipientManagementService implements RecipientProcessor<Acco
                                 .setMonth(recipientCreation.getDobMonth())
                                 .setYear(recipientCreation.getDobYear())
                                 .build())
+                        .setAddress(AccountCreateParams.Individual.Address.builder()
+                                .setCountry(recipientCreation.getCountryCode())
+                                .setState(recipientCreation.getRegion())
+                                .setCity(recipientCreation.getCity())
+                                .setCountry(recipientCreation.getCountryCode())
+                                .setPostalCode(recipientCreation.getPostalCode())
+                                .build())
                         .build())
+
+
                 .setCapabilities(AccountCreateParams.Capabilities.builder()
                         .setTransfers(AccountCreateParams.Capabilities.Transfers.builder()
                                 .setRequested(true)
                                 .build())
+                        .build())
+                .setTosAcceptance(AccountCreateParams.TosAcceptance.builder()
+                        .setIp(recipientCreation.getIp())
+                        .setDate(Instant.now().toEpochMilli())
+                        .setUserAgent(recipientCreation.getBrowserAccess())
+                        .setServiceAgreement("DEFAULT")
                         .build())
                 .build();
 

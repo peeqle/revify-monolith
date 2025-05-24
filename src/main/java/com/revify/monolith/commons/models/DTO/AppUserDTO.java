@@ -1,6 +1,7 @@
 package com.revify.monolith.commons.models.DTO;
 
 import com.revify.monolith.user.models.MicroUserDTO;
+import com.revify.monolith.user.models.MicroUserOptionsDTO;
 import com.revify.monolith.user.models.user.AppUser;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -20,7 +21,7 @@ public class AppUserDTO extends MicroUserDTO {
         return AppUserDTO.builder()
                 .displayName(appUser.getCommonUserName())
                 .userRole(appUser.getClientUserRole())
-                .options(appUser.getAppUserOptions())
+                .options(MicroUserOptionsDTO.from(appUser.getAppUserOptions()))
                 .email(appUser.getEmail())
                 .id(appUser.getId())
                 .build();

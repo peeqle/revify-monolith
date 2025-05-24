@@ -3,10 +3,11 @@ package com.revify.monolith.keycloak;
 import com.revify.monolith.commons.exceptions.KeycloakUserNotFound;
 import com.revify.monolith.commons.models.auth.KeycloakClientRoles;
 import com.revify.monolith.commons.models.auth.KeycloakUserAttributes;
-import com.revify.monolith.commons.models.user.RegisterRequest;
 import com.revify.monolith.config.properties.KeycloakConfigProperties;
+import com.revify.monolith.user.models.user.AppUser;
 import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.admin.client.resource.UsersResource;
@@ -18,6 +19,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class KeycloakService {
@@ -26,11 +28,11 @@ public class KeycloakService {
 
     private final KeycloakProvider keycloakProvider;
 
-    public String registerUser(RegisterRequest userModel) {
+    public String registerUser(AppUser newAppUser, String password) {
         UsersResource usersResource = keycloakProvider.getInstance().realm(keycloakConfigProperties.getRealm()).users();
-        CredentialRepresentation credentialRepresentation = createPasswordCredentials(userModel.getPassword());
+        CredentialRepresentation credentialRepresentation = createPasswordCredentials(password);
 
-        UserRepresentation kcUser = getUserRepresentation(userModel, credentialRepresentation);
+        UserRepresentation kcUser = getUserRepresentation(newAppUser, credentialRepresentation);
 
         Response response = usersResource.create(kcUser);
         if (response.getStatus() == Response.Status.CREATED.getStatusCode()) {
@@ -44,20 +46,19 @@ public class KeycloakService {
         return null;
     }
 
-    public boolean deleteUser(Long id) {
+    public void deleteUser(Long id) {
         UsersResource users = keycloakProvider.getInstance()
                 .realm(keycloakConfigProperties.getRealm()).users();
         List<UserRepresentation> usersResource = users
-                .searchByAttributes("system_user_id:" + id);
+                .searchByAttributes(KeycloakUserAttributes.SYSTEM_USER_ID + ":" + id);
         try {
             for (UserRepresentation user : usersResource) {
                 Response delete = users.delete(user.getId());
                 delete.close();
             }
         } catch (Exception e) {
-            return false;
+            log.warn("Error deleting user", e);
         }
-        return true;
     }
 
     public boolean deleteUser(String email, String username) {
@@ -109,16 +110,16 @@ public class KeycloakService {
         return passwordCredentials;
     }
 
-    private UserRepresentation getUserRepresentation(RegisterRequest registerRequest, CredentialRepresentation credentialRepresentation) {
+    private UserRepresentation getUserRepresentation(AppUser appUser, CredentialRepresentation credentialRepresentation) {
         UserRepresentation kcUser = new UserRepresentation();
-        kcUser.setUsername(registerRequest.getUsername());
+        kcUser.setUsername(appUser.getUsername());
         kcUser.setCredentials(Collections.singletonList(credentialRepresentation));
-        kcUser.setFirstName(registerRequest.getFirstName());
-        kcUser.setLastName(registerRequest.getLastName());
-        kcUser.setEmail(registerRequest.getEmail());
+        kcUser.setFirstName(appUser.getFirstName());
+        kcUser.setLastName(appUser.getLastName());
+        kcUser.setEmail(appUser.getEmail());
         kcUser.setEnabled(false);
         kcUser.setEmailVerified(true);
-        kcUser.setAttributes(Map.of(KeycloakUserAttributes.SYSTEM_USER_ID.getKey(), List.of(String.valueOf(registerRequest.getUserId()))));
+        kcUser.setAttributes(Map.of(KeycloakUserAttributes.SYSTEM_USER_ID.getKey(), List.of(String.valueOf(appUser.getId()))));
         kcUser.setClientRoles(
                 Map.of(keycloakConfigProperties.getResource(),
                         Collections.singletonList(KeycloakClientRoles.USER.name()))

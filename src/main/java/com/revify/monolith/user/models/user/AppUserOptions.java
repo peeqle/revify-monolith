@@ -25,4 +25,8 @@ public class AppUserOptions implements Serializable {
     private UserRating userRating;
 
     private Currency preferedCurrency = Currency.USD;
+
+    private Address address;
+
+    public record Address(String street, String city, String region, String postal, String apartment, String country) {}
 }
