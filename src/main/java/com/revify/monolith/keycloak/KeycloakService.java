@@ -44,13 +44,19 @@ public class KeycloakService {
         return null;
     }
 
-    public boolean deleteUser(String id) {
-        UsersResource usersResource = keycloakProvider.getInstance().realm(keycloakConfigProperties.getRealm()).users();
-        Response response = usersResource.delete(id);
-        if (response.getStatus() >= 300) {
+    public boolean deleteUser(Long id) {
+        UsersResource users = keycloakProvider.getInstance()
+                .realm(keycloakConfigProperties.getRealm()).users();
+        List<UserRepresentation> usersResource = users
+                .searchByAttributes("system_user_id:" + id);
+        try {
+            for (UserRepresentation user : usersResource) {
+                Response delete = users.delete(user.getId());
+                delete.close();
+            }
+        } catch (Exception e) {
             return false;
         }
-        response.close();
         return true;
     }
 

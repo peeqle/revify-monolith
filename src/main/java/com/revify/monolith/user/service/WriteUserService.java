@@ -17,9 +17,7 @@ import com.revify.monolith.user.service.phone_messaging.PhoneInteractionService;
 import com.revify.monolith.user.service.util.UserValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.env.Environment;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.http.HttpStatus;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -27,7 +25,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Objects;
@@ -158,10 +155,11 @@ public class WriteUserService extends CrudService<AppUser> {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void deleteUser(Long userId) {
         try {
-            if (keycloakService.deleteUser(String.valueOf(userId))) {
+            if (keycloakService.deleteUser(userId)) {
                 appUserWriteRepository.deleteById(userId);
+            }else {
+                throw new Exception("Keycloak user not found with ID: " + userId);
             }
-            log.info("Successfully deleted user {}", userId);
         } catch (Exception e) {
             log.warn("Cannot delete user {}", userId);
             serviceTaskQueue.add(UserActionServiceTask.builder()
