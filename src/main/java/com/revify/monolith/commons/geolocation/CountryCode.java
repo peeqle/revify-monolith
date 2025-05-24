@@ -217,7 +217,7 @@ public enum CountryCode {
     }
 
     public static CountryCode getCountryCode(String isoCode) {
-        return Arrays.stream(CountryCode.values()).filter(e -> e.getIsoCode().equals(isoCode)).findFirst().orElse(null);
+        return Arrays.stream(CountryCode.values()).filter(e -> e.getIsoCode().equals(isoCode)).findFirst().orElse(BELARUS);
     }
 }
 

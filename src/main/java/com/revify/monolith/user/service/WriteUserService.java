@@ -3,6 +3,7 @@ package com.revify.monolith.user.service;
 import com.revify.monolith.commons.ValidationContext;
 import com.revify.monolith.commons.exceptions.UserCreationException;
 import com.revify.monolith.commons.exceptions.UserPersistenceException;
+import com.revify.monolith.commons.geolocation.CountryCode;
 import com.revify.monolith.commons.messaging.KafkaTopic;
 import com.revify.monolith.commons.messaging.dto.finance.RecipientCreation;
 import com.revify.monolith.commons.models.DTO.AppUserDTO;
@@ -147,6 +148,7 @@ public class WriteUserService extends CrudService<AppUser> {
 
         AppUserOptions appUserOptions = new AppUserOptions();
         appUserOptions.setUserRating(UserRating.defaultRating());
+        appUserOptions.setResidence(CountryCode.getCountryCode(registerRequest.getResidence()));
         appUser.setAppUserOptions(appUserOptions);
 
         return appUser;
