@@ -31,6 +31,11 @@ public class AppUser {
     private String firstName;
     private String lastName;
     private String middleName;
+
+    private Integer age;
+    private Integer dob;
+    private Integer mob;
+    private Integer yob;
     //todo make submodule for passport data, migrate fields, dont forget ab rpc models
 
     @Column(unique = true, name = "keycloak_id")
@@ -39,7 +44,7 @@ public class AppUser {
     private boolean enabled = false;
     private boolean locked = false;
 
-    private UserRole clientUserRole = UserRole.CLIENT;
+    private UserRole userRole = UserRole.CLIENT;
 
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
@@ -81,7 +86,7 @@ public class AppUser {
 
         userMap.put(ElasticContext.USERNAME, this.username);
         userMap.put(ElasticContext.COMMON_INFORMATION, this.username);
-        userMap.put(ElasticContext.ROLE, this.clientUserRole.name());
+        userMap.put(ElasticContext.ROLE, this.userRole.name());
 
         return userMap;
     }

@@ -1,6 +1,5 @@
 package com.revify.monolith.commons.models.user;
 
-import com.revify.monolith.commons.geolocation.CountryCode;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,6 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class RegisterRequest {
     private Long userId;
+    private String userRole;
     private String firstName;
     private String lastName;
     private String username;
@@ -23,6 +23,9 @@ public class RegisterRequest {
     private String region;
     private String postalCode;
     private String apartmentHouse;
+    private Integer day;
+    private Integer month;
+    private Integer year;
 
     private String ip;
     private String browserAccess;

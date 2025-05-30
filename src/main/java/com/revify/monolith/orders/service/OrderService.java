@@ -11,7 +11,7 @@ import com.revify.monolith.commons.models.orders.*;
 import com.revify.monolith.notifications.connector.producers.FanoutNotificationProducer;
 import com.revify.monolith.orders.models.Delay;
 import com.revify.monolith.orders.models.Order;
-import com.revify.monolith.user.service.ReadUserService;
+import com.revify.monolith.orders.models.PathSegment;
 import io.vavr.Tuple2;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +26,8 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -40,40 +42,63 @@ public class OrderService {
 
     private final DelayService delayService;
 
-    private final ReadUserService readUserService;
-
     //todo remove and use direct, when normal integration utils arise
     private final FanoutNotificationProducer notificationProducer;
 
+    public void activateOrder(String orderId) {
+        Order orderById = findOrderById(new ObjectId(orderId));
+        if (orderById == null) {
+            return;
+        }
+
+        orderById.setStatus(OrderShipmentStatus.BOUGHT);
+        orderById.setDeliveryTimeEnd(Instant.now().plus(7, ChronoUnit.DAYS).toEpochMilli());
+        mongoTemplate.save(orderById);
+    }
+
     public Order createOrder(OrderCreationDTO orderDto) {
-        Order newOrder = mongoTemplate.save(Order.from(orderDto));
-        if (newOrder.getId() == null) {
+        Order order = mongoTemplate.save(Order.from(orderDto));
+        if (order.getId() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order creation failed");
         }
-        sendFanoutNotification(
-                "Order Created",
-                "Order ID: " + newOrder.getId().toHexString() + " created."
-        );
 
-        if(newOrder.getAdditionalStatus() == OrderAdditionalStatus.CLIENT_PAYMENT_AWAIT) {
+        saveShipmentParticles(order);
+        return order;
+    }
 
+    private void saveShipmentParticles(Order order) {
+        var head = order.getShipmentParticle();
+        while (head != null && head.getNext() != null) {
+            PathSegment pathSegment = new PathSegment();
+            pathSegment.setReceiverId(order.getReceiverId());
+            pathSegment.setCourierId(head.getCourierId());
+            pathSegment.setAcceptedCourierId(null);
+
+            pathSegment.setOrder(order);
+            pathSegment.setParticle(head);
+            pathSegment.setValidUntil(Instant.now().plus(7, ChronoUnit.DAYS).toEpochMilli());
+
+            pathSegment.setIsAcceptedByCustomer(true);
+            pathSegment.setIsCompleted(false);
+            pathSegment.setIsArchived(false);
+
+            mongoTemplate.save(pathSegment);
+            head = head.getNext();
         }
-        return newOrder;
     }
 
     public List<Order> getUserOrders(Integer offset, Integer limit) {
-        Criteria criteria = Criteria.where("isSuspended").is(false);
-
-        if(!readUserService.isClient()) {
-            criteria.andOperator(Criteria.where("receiverId").is(UserUtils.getUserId())
-                    .orOperator(Criteria.where("couriersInvolved").in(UserUtils.getUserId())));
-        }else {
-            criteria.and("receiverId").is(UserUtils.getUserId());
-        }
+        Criteria criteria = new Criteria().andOperator(
+                Criteria.where("isSuspended").is(false),
+                new Criteria().orOperator(
+                        Criteria.where("receiverId").is(UserUtils.getUserId()),
+                        Criteria.where("couriersInvolved").in(UserUtils.getUserId())
+                )
+        );
 
         return mongoTemplate.find(Query.query(criteria)
-                        .with(Sort.by(Sort.Direction.ASC, "deliveryTimeEnd"))
-                .skip((long) offset*limit).limit(limit), Order.class);
+                .with(Sort.by(Sort.Direction.ASC, "deliveryTimeEnd"))
+                .skip((long) offset * limit).limit(limit), Order.class);
     }
 
     //better create unified service for deps like write->read, to escape future circular and for the most part stay in cqrs

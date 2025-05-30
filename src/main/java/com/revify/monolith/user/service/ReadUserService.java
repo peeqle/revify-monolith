@@ -20,7 +20,7 @@ public class ReadUserService extends CrudService<AppUser> {
 
     public boolean isClient() {
         Optional<AppUser> currentUser = getCurrentUser();
-        return currentUser.isPresent() && currentUser.get().getClientUserRole() == UserRole.CLIENT;
+        return currentUser.isPresent() && currentUser.get().getUserRole() == UserRole.CLIENT;
     }
 
     public Optional<AppUser> getCurrentUser() {

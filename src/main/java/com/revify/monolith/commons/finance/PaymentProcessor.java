@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.revify.monolith.commons.geolocation.CountryCode.*;
 
@@ -14,7 +16,8 @@ import static com.revify.monolith.commons.geolocation.CountryCode.*;
 public enum PaymentProcessor {
 
     BE_PAID(sngBlock(), "bePaid"),
-    STRIPE(natoBlock(), "stripe"),
+    STRIPE(Stream.concat(sngBlock().stream(), natoBlock().stream())
+            .collect(Collectors.toList()), "stripe"),
     BANK_PROCESSING(List.of(), "plain-bank-processing");
 
     private final List<CountryCode> regionalProcessing;
@@ -26,8 +29,8 @@ public enum PaymentProcessor {
             throw new IllegalArgumentException("Country code " + countryCode + " not found");
         }
 
-        return BE_PAID.regionalProcessing.contains(code) ? BE_PAID :
-                STRIPE.regionalProcessing.contains(code) ? STRIPE : BANK_PROCESSING;
+        return STRIPE.regionalProcessing.contains(code) ? STRIPE :
+                BE_PAID.regionalProcessing.contains(code) ? BE_PAID : BANK_PROCESSING;
     }
 
     private static List<CountryCode> sngBlock() {
@@ -40,7 +43,8 @@ public enum PaymentProcessor {
                 KYRGYZSTAN,
                 KAZAKHSTAN,
                 TURKMENISTAN,
-                TAJIKISTAN
+                TAJIKISTAN,
+                CHINA
         );
     }
 

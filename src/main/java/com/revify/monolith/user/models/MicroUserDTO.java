@@ -2,9 +2,7 @@ package com.revify.monolith.user.models;
 
 import com.revify.monolith.commons.models.user.UserRole;
 import com.revify.monolith.user.models.user.AppUser;
-import com.revify.monolith.user.models.user.AppUserOptions;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -25,7 +23,7 @@ public class MicroUserDTO {
         return MicroUserDTO.builder()
                 .id(user.getId())
                 .username(user.getUsername())
-                .userRole(user.getClientUserRole())
+                .userRole(user.getUserRole())
                 .displayName(user.getCommonUserName())
                 .options(MicroUserOptionsDTO.from(user.getAppUserOptions()))
                 .build();

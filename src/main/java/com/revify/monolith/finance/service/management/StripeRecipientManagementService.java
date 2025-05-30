@@ -6,12 +6,9 @@ import com.revify.monolith.finance.RecipientProcessor;
 import com.revify.monolith.finance.config.properties.PaymentProcessingProperties;
 import com.revify.monolith.finance.model.exc.PaymentServiceInitializationException;
 import com.stripe.Stripe;
-import com.stripe.model.Account;
-import com.stripe.model.Customer;
-import com.stripe.model.PaymentMethod;
-import com.stripe.param.AccountCreateParams;
-import com.stripe.param.CustomerCreateParams;
-import com.stripe.param.PaymentMethodAttachParams;
+import com.stripe.exception.StripeException;
+import com.stripe.model.*;
+import com.stripe.param.*;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +27,45 @@ public class StripeRecipientManagementService implements RecipientProcessor<Cust
 
     static {
         Stripe.enableTelemetry = false;
+    }
+
+    /**
+     * there are some limitations and considerations when using SetupIntents. Here are the key points:
+     * <p>
+     * Purpose: SetupIntents are specifically for saving payment methods for future use without immediately charging the customer.
+     * <p>
+     * Expiration: SetupIntents expire after 24 hours if not confirmed.
+     * <p>
+     * One-time use: Each SetupIntent can only be used once. After confirmation, you need to create a new SetupIntent for another setup.
+     * <p>
+     * Payment method types: Not all payment methods support SetupIntents. See Payment method support for details.
+     * <p>
+     * Authentication: Some payment methods may require additional authentication steps.
+     *
+     * @return
+     * @throws StripeException
+     */
+    public String getSetupIntent(String customerId) throws StripeException {
+        SetupIntentCreateParams params = SetupIntentCreateParams.builder()
+                .setCustomer(customerId)
+                .addPaymentMethodType("card")
+                .build();
+
+        SetupIntent setupIntent = SetupIntent.create(params);
+        return setupIntent.getClientSecret();
+    }
+
+    public PaymentMethodCollection getAssociatedPaymentMethods(String accountId) {
+        try {
+            PaymentMethodListParams params = PaymentMethodListParams.builder()
+                    .setCustomer(accountId)
+                    .setType(PaymentMethodListParams.Type.CARD)
+                    .build();
+
+            return PaymentMethod.list(params);
+        } catch (StripeException e) {
+            throw new RuntimeException("Error fetching payment methods", e);
+        }
     }
 
     @PostConstruct

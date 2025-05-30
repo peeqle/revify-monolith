@@ -13,6 +13,7 @@ public interface KafkaTopic {
 
     String ORDER_MODEL_CREATION = "order_model_create";
     String ORDER_STATUS_UPDATE = "order_status_update";
+    String ACTIVATE_ORDER = "activate_order";
 
     String USER_NOTIFICATIONS = "user_notifications";
     String MODERATOR_NOTIFICATIONS = "moderator_notifications";

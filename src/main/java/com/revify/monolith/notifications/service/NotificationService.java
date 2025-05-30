@@ -25,6 +25,7 @@ public class NotificationService {
     private final SimpMessagingTemplate simpMessagingTemplate;
 
     public void createNotification(Notification notification) {
+
         Notification savedNotification = mongoTemplate.save(notification);
 
         Notification.NotificationDTO body =

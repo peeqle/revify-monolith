@@ -62,7 +62,7 @@ public class RecipientCreation {
                 .postalCode(appUserOptions.getAddress().postal())
 
                 .currency(appUserOptions.getPreferedCurrency().getName())
-                .userRole(appUser.getClientUserRole())
+                .userRole(appUser.getUserRole())
                 .ip(appUser.getSystemInformation().getIp())
                 .browserAccess(appUser.getSystemInformation().getBrowserAccess())
                 .build();

@@ -22,6 +22,12 @@ public class OrderConsumer {
     private final OrderService orderService;
     private final Gson gson = new GsonBuilder().create();
 
+    @KafkaListener(topics = KafkaTopic.ACTIVATE_ORDER, groupId = ConsumerGroups.ORDERS)
+    public void activateOrder(@Payload String orderId) {
+        log.debug("Activating order {}", orderId);
+        orderService.activateOrder(orderId);
+    }
+
     @KafkaListener(topics = KafkaTopic.ORDER_MODEL_CREATION, groupId = ConsumerGroups.ORDERS)
     public void listenOrderCreation(@Payload String message) {
         logReceivedMessage(KafkaTopic.ORDER_MODEL_CREATION, message);

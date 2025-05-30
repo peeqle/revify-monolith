@@ -10,6 +10,7 @@ import com.revify.monolith.commons.messaging.KafkaTopic;
 import com.revify.monolith.commons.messaging.dto.finance.RecipientCreation;
 import com.revify.monolith.commons.models.DTO.AppUserDTO;
 import com.revify.monolith.commons.models.user.RegisterRequest;
+import com.revify.monolith.commons.models.user.UserRole;
 import com.revify.monolith.keycloak.KeycloakService;
 import com.revify.monolith.user.models.UserActionTaskStatus;
 import com.revify.monolith.user.models.user.AppUser;
@@ -30,6 +31,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
+import java.time.LocalDate;
+import java.time.Period;
 import java.util.List;
 import java.util.Objects;
 import java.util.PriorityQueue;
@@ -132,8 +135,8 @@ public class WriteUserService extends CrudService<AppUser> {
         if (updatedData.getAppUserOptions() != null) {
             existingUser.setAppUserOptions(updatedData.getAppUserOptions());
         }
-        if (updatedData.getClientUserRole() != null) {
-            existingUser.setClientUserRole(updatedData.getClientUserRole());
+        if (updatedData.getUserRole() != null) {
+            existingUser.setUserRole(updatedData.getUserRole());
         }
 
         existingUser.setUpdatedOnServerUtc(System.currentTimeMillis());
@@ -148,6 +151,7 @@ public class WriteUserService extends CrudService<AppUser> {
         appUser.setEmail(registerRequest.getEmail());
         appUser.setFirstName(registerRequest.getFirstName());
         appUser.setLastName(registerRequest.getLastName());
+        appUser.setUserRole(UserRole.valueOf(registerRequest.getUserRole()));
 
         AppUserOptions appUserOptions = new AppUserOptions();
         appUserOptions.setUserRating(UserRating.defaultRating());
@@ -159,6 +163,15 @@ public class WriteUserService extends CrudService<AppUser> {
                 registerRequest.getApartmentHouse(),
                 registerRequest.getCountry()));
         appUser.setAppUserOptions(appUserOptions);
+        appUser.setDob(registerRequest.getDay());
+        appUser.setMob(registerRequest.getMonth());
+        appUser.setYob(registerRequest.getYear());
+        {
+            LocalDate birthDate = LocalDate.of(registerRequest.getYear(), registerRequest.getMonth(), registerRequest.getDay());
+            LocalDate currentDate = LocalDate.now();
+            Period period = Period.between(birthDate, currentDate);
+            appUser.setAge(period.getYears());
+        }
 
         SystemInformation systemInformation = new SystemInformation();
         systemInformation.setIp(registerRequest.getIp());

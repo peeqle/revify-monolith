@@ -20,7 +20,7 @@ public class AppUserDTO extends MicroUserDTO {
     public static AppUserDTO from(AppUser appUser) {
         return AppUserDTO.builder()
                 .displayName(appUser.getCommonUserName())
-                .userRole(appUser.getClientUserRole())
+                .userRole(appUser.getUserRole())
                 .options(MicroUserOptionsDTO.from(appUser.getAppUserOptions()))
                 .email(appUser.getEmail())
                 .id(appUser.getId())

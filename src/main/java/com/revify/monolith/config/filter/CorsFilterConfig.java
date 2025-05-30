@@ -1,4 +1,4 @@
-package com.revify.monolith.config;
+package com.revify.monolith.config.filter;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

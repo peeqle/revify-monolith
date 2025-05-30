@@ -169,9 +169,6 @@ public class ManagementService {
         if (auction == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found for item: " + auctionId);
         }
-        if (!auction.getIsActive()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Auction is in active state");
-        }
 
         Bid bid = findById(selectedBid);
         if (bid == null) {

@@ -44,6 +44,10 @@ public class PaymentSystemAccount {
     @Size(max = 50, message = "Last name cannot exceed 50 characters")
     private String lastName;
 
+    @NotBlank(message = "Last name cannot be blank")
+    @Size(max = 50, message = "Last name cannot exceed 50 characters")
+    private String name;
+
     @NotBlank(message = "Email cannot be blank")
     @Email(message = "Invalid email address")
     private String email;
@@ -75,6 +79,9 @@ public class PaymentSystemAccount {
 
     private Boolean isDeleted;
     private Boolean isActive;
+
+    private Boolean isReceiver = false;
+    private Boolean isCustomer = false;
 
     @Data
     @Embeddable

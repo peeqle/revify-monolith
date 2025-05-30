@@ -4,6 +4,7 @@ import com.revify.monolith.geo.model.StoredGeoLocation;
 import com.revify.monolith.geo.model.UserGeolocation;
 import com.revify.monolith.items.model.item.Item;
 import com.revify.monolith.items.model.item.composite.CompositeItem;
+import com.revify.monolith.orders.models.PathSegment;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -37,5 +38,11 @@ public class MongoIndexesInitializer {
 
         mongoTemplate.indexOps(CompositeItem.class)
                 .ensureIndex(new GeospatialIndex("destination.location").typed(GeoSpatialIndexType.GEO_2DSPHERE));
+
+        //paths indexes
+        mongoTemplate.indexOps(PathSegment.class)
+                .ensureIndex(new GeospatialIndex("particle.from.location").typed(GeoSpatialIndexType.GEO_2DSPHERE));
+        mongoTemplate.indexOps(PathSegment.class)
+                .ensureIndex(new GeospatialIndex("particle.to.location").typed(GeoSpatialIndexType.GEO_2DSPHERE));
     }
 }

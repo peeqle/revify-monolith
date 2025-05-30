@@ -87,7 +87,7 @@ public class GeolocationService {
     }
 
     public StoredGeoLocation findForCoordinates(Double lat, Double lon) {
-        Query query = Query.query(Criteria.where("geoLocation.location").near(new GeoJsonPoint(lon, lat)));
+        Query query = Query.query(Criteria.where("geoLocation.location").near(new GeoJsonPoint(lon, lat)).maxDistance(100.0));
         return mongoTemplate.findOne(query, StoredGeoLocation.class);
     }
 
