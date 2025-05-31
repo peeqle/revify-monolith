@@ -1,10 +1,15 @@
 package com.revify.monolith.finance.service.management;
 
 
+import com.revify.monolith.commons.finance.Currency;
+import com.revify.monolith.commons.finance.Price;
 import com.revify.monolith.commons.messaging.dto.finance.RecipientCreation;
+import com.revify.monolith.currency_reader.service.CurrencyService;
 import com.revify.monolith.finance.RecipientProcessor;
 import com.revify.monolith.finance.config.properties.PaymentProcessingProperties;
 import com.revify.monolith.finance.model.exc.PaymentServiceInitializationException;
+import com.revify.monolith.finance.model.jpa.PaymentSystemAccount;
+import com.revify.monolith.finance.model.jpa.payment.Payment;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.*;
@@ -14,7 +19,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Locale;
 import java.util.Map;
 
 
@@ -24,6 +31,8 @@ import java.util.Map;
 public class StripeRecipientManagementService implements RecipientProcessor<Customer, Account> {
 
     private final PaymentProcessingProperties paymentProcessingProperties;
+
+    private final CurrencyService currencyService;
 
     static {
         Stripe.enableTelemetry = false;
@@ -66,6 +75,28 @@ public class StripeRecipientManagementService implements RecipientProcessor<Cust
         } catch (StripeException e) {
             throw new RuntimeException("Error fetching payment methods", e);
         }
+    }
+
+    public PaymentIntent createInvoice(Payment payment) throws StripeException {
+        PaymentSystemAccount account = payment.getAccount();
+        if (account == null) {
+            throw new RuntimeException("Payment account is null");
+        }
+        Price price = payment.getPrice();
+        //value in USD
+        BigDecimal bigDecimal = currencyService.convertTo(price.getCurrency(), Currency.USD, price.getAmount().doubleValue())
+                .multiply(BigDecimal.valueOf(100.0));
+
+        PaymentIntentCreateParams params =
+                PaymentIntentCreateParams.builder()
+                        .setAmount(bigDecimal.longValue())
+                        .setCurrency(Currency.USD.getName().toLowerCase(Locale.ENGLISH))
+                        .setCustomer(account.getAccountId())
+                        .addPaymentMethodType("card")
+                        .addPaymentMethodType("link")
+                        .setApplicationFeeAmount(200L)
+                        .build();
+        return PaymentIntent.create(params);
     }
 
     @PostConstruct

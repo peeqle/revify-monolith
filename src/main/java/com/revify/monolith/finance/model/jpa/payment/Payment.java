@@ -34,6 +34,8 @@ public class Payment implements Serializable {
     @Embedded
     private Price price;
 
+    private String paymentIntentId;
+
     @ManyToOne(optional = false)
     @JoinColumn(name = "recipient_id", nullable = false)
     private PaymentSystemAccount account;

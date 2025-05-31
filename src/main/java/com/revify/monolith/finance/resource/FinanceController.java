@@ -1,15 +1,20 @@
 package com.revify.monolith.finance.resource;
 
 import com.revify.monolith.commons.auth.sync.UserUtils;
+import com.revify.monolith.finance.model.dto.PaymentDTO;
 import com.revify.monolith.finance.model.dto.PaymentMethodDTO;
 import com.revify.monolith.finance.model.jpa.BePaidPaymentSystemAccount;
 import com.revify.monolith.finance.model.jpa.PaymentSystemAccount;
+import com.revify.monolith.finance.service.OrderPaymentService;
 import com.revify.monolith.finance.service.RecipientService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
@@ -25,10 +30,7 @@ public class FinanceController {
 
     private final RecipientService recipientService;
 
-    @PostMapping("/intent")
-    public void getCustomerIntents() {
-
-    }
+    private final OrderPaymentService orderPaymentService;
 
     @GetMapping("/client-exists")
     public ResponseEntity<?> validateCustomerExists() {
@@ -48,6 +50,11 @@ public class FinanceController {
     @GetMapping("/payment-methods")
     public ResponseEntity<Map<String, List<PaymentMethodDTO>>> getUserPaymentMethods() {
         return ResponseEntity.ok(recipientService.getUserPaymentMethods());
+    }
+
+    @GetMapping("/order/payments")
+    public ResponseEntity<List<PaymentDTO>> getUserActivePayments(@RequestParam Integer offset, @RequestParam Integer limit) {
+        return ResponseEntity.ok(orderPaymentService.getUserPayments(offset, limit).stream().map(PaymentDTO::from).toList());
     }
 
 

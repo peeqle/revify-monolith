@@ -4,6 +4,7 @@ import lombok.Getter;
 
 @Getter
 public enum PaymentExecutionStatus {
+    WAITING,
     EXECUTED,
     PENDING,
     FAILED,

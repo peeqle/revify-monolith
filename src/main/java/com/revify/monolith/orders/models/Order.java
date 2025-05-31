@@ -1,10 +1,10 @@
 package com.revify.monolith.orders.models;
 
+import com.revify.monolith.commons.finance.Price;
 import com.revify.monolith.commons.models.orders.OrderAdditionalStatus;
 import com.revify.monolith.commons.models.orders.OrderCreationDTO;
 import com.revify.monolith.commons.models.orders.OrderShipmentParticle;
 import com.revify.monolith.commons.models.orders.OrderShipmentStatus;
-import com.revify.monolith.orders.util.OrderShipmentParticleMapper;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import jakarta.validation.constraints.NotNull;
@@ -17,6 +17,7 @@ import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.math.BigDecimal;
 import java.util.*;
 
 @Data

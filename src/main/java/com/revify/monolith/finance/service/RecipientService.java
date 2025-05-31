@@ -171,38 +171,38 @@ public class RecipientService {
             throw new UnsupportedOperationException(recipientCreation.getCountryCode() + " is not supported");
         }
 
-        if (recipientCreation.getUserRole().equals(UserRole.CLIENT)) {
-            Object registeredCustomer = recipientProcessor.registerCustomer(recipientCreation);
+        Object registeredCustomer = recipientProcessor.registerCustomer(recipientCreation);
 
-            if (registeredCustomer instanceof Customer account) {
-                StripePaymentSystemAccount stripePaymentSystemAccount = new StripePaymentSystemAccount();
-                stripePaymentSystemAccount.setSystemUserId(Long.valueOf(account.getMetadata().get("userId")));
-                stripePaymentSystemAccount.setAccountId(account.getId());
-                stripePaymentSystemAccount.setFirstName(recipientCreation.getFirstName());
-                stripePaymentSystemAccount.setLastName(recipientCreation.getLastName());
-                stripePaymentSystemAccount.setName(account.getName());
-                stripePaymentSystemAccount.setEmail(account.getEmail());
-                stripePaymentSystemAccount.setPhoneNumber(account.getPhone());
+        if (registeredCustomer instanceof Customer account) {
+            StripePaymentSystemAccount stripePaymentSystemAccount = new StripePaymentSystemAccount();
+            stripePaymentSystemAccount.setSystemUserId(Long.valueOf(account.getMetadata().get("userId")));
+            stripePaymentSystemAccount.setAccountId(account.getId());
+            stripePaymentSystemAccount.setFirstName(recipientCreation.getFirstName());
+            stripePaymentSystemAccount.setLastName(recipientCreation.getLastName());
+            stripePaymentSystemAccount.setName(account.getName());
+            stripePaymentSystemAccount.setEmail(account.getEmail());
+            stripePaymentSystemAccount.setPhoneNumber(account.getPhone());
 
-                PaymentSystemAccount.Address address = new PaymentSystemAccount.Address();
-                address.setCity(account.getAddress().getCity());
-                address.setCountry(account.getAddress().getCountry());
-                address.setPostalCode(account.getAddress().getPostalCode());
-                address.setState(recipientCreation.getRegion());
-                address.setAddressLine(account.getAddress().getLine1() + " " + account.getAddress().getLine2());
-                stripePaymentSystemAccount.setAddress(address);
+            PaymentSystemAccount.Address address = new PaymentSystemAccount.Address();
+            address.setCity(account.getAddress().getCity());
+            address.setCountry(account.getAddress().getCountry());
+            address.setPostalCode(account.getAddress().getPostalCode());
+            address.setState(recipientCreation.getRegion());
+            address.setAddressLine(account.getAddress().getLine1() + " " + account.getAddress().getLine2());
+            stripePaymentSystemAccount.setAddress(address);
 
-                stripePaymentSystemAccount.setDobDay(recipientCreation.getDobDay());
-                stripePaymentSystemAccount.setDobMonth(recipientCreation.getDobMonth());
-                stripePaymentSystemAccount.setDobYear(recipientCreation.getDobYear());
+            stripePaymentSystemAccount.setDobDay(recipientCreation.getDobDay());
+            stripePaymentSystemAccount.setDobMonth(recipientCreation.getDobMonth());
+            stripePaymentSystemAccount.setDobYear(recipientCreation.getDobYear());
 
-                stripePaymentSystemAccount.setIsDeleted(account.getDeleted() != null && account.getDeleted());
-                stripePaymentSystemAccount.setIsActive(account.getDeleted() == null || !account.getDeleted());
-                stripePaymentSystemAccount.setCreatedAt(account.getCreated());
+            stripePaymentSystemAccount.setIsDeleted(account.getDeleted() != null && account.getDeleted());
+            stripePaymentSystemAccount.setIsActive(account.getDeleted() == null || !account.getDeleted());
+            stripePaymentSystemAccount.setCreatedAt(account.getCreated());
 
-                stripePaymentSystemRepository.save(stripePaymentSystemAccount);
-            }
-        } else {
+            stripePaymentSystemRepository.save(stripePaymentSystemAccount);
+        }
+
+        if (!recipientCreation.getUserRole().equals(UserRole.CLIENT)) {
             Object registeredCourier = recipientProcessor.registerCourier(recipientCreation);
 
             if (registeredCourier instanceof Account account) {

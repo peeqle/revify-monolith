@@ -196,10 +196,9 @@ public class PathService {
             current.setPreviousPrice(current.getPrice());
             currentPrice.setAmount(currentPrice.getAmount().subtract(newParticlePrice.getAmount()));
         }
-
-        current.setIsSplit(true);
         current.setTo(geoLocation);
-
+        
+        newShipmentParticle.isSplit(true);
         newShipmentParticle.next(next);
         OrderShipmentParticle built = newShipmentParticle.build();
         current.setNext(built);
@@ -207,7 +206,6 @@ public class PathService {
         PathSegment pathSegment = new PathSegment();
         pathSegment.setCreatedAt(Instant.now().toEpochMilli());
         pathSegment.setValidUntil(Instant.now().plus(2, ChronoUnit.DAYS).toEpochMilli());
-
         pathSegment.setOrder(orderById);
         pathSegment.setParticle(built);
         pathSegment.setCourierId(UserUtils.getUserId());

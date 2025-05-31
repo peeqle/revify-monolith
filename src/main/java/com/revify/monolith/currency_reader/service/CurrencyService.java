@@ -2,6 +2,7 @@ package com.revify.monolith.currency_reader.service;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.revify.monolith.commons.finance.Currency;
 import com.revify.monolith.commons.finance.Price;
 import com.revify.monolith.currency_reader.data.CurrencySnapshot;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +46,10 @@ public class CurrencyService {
                 .withCurrency(first.getCurrency())
                 .withAmount(first.getAmount().add(secondConvertedAmount))
                 .build();
+    }
+
+    public BigDecimal convertTo(Currency from, Currency to, Double amount) {
+        return convertTo(from.getName(), to.getName(), amount);
     }
 
     public BigDecimal convertTo(String from, String to, Double amount) {

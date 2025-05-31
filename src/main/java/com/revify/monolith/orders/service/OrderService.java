@@ -8,6 +8,8 @@ import com.revify.monolith.commons.messaging.dto.ItemBillingCreation;
 import com.revify.monolith.commons.models.bid.AuctionCreationRequest;
 import com.revify.monolith.commons.models.bid.PathFragment;
 import com.revify.monolith.commons.models.orders.*;
+import com.revify.monolith.finance.PaymentService;
+import com.revify.monolith.finance.service.OrderPaymentService;
 import com.revify.monolith.notifications.connector.producers.FanoutNotificationProducer;
 import com.revify.monolith.orders.models.Delay;
 import com.revify.monolith.orders.models.Order;
@@ -42,6 +44,8 @@ public class OrderService {
 
     private final DelayService delayService;
 
+    private final OrderPaymentService orderPaymentService;
+
     //todo remove and use direct, when normal integration utils arise
     private final FanoutNotificationProducer notificationProducer;
 
@@ -63,6 +67,8 @@ public class OrderService {
         }
 
         saveShipmentParticles(order);
+        orderPaymentService.createPayment(order);
+
         return order;
     }
 

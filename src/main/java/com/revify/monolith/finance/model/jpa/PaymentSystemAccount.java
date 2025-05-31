@@ -27,7 +27,7 @@ public class PaymentSystemAccount {
     private Long systemUserId;
 
     @NotBlank(message = "Account number cannot be blank")
-    @Size(max = 120, message = "Account number cannot exceed 20 characters")
+    @Size(max = 255, message = "Account number cannot exceed 20 characters")
     private String accountId;
 
     @OneToMany(cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
