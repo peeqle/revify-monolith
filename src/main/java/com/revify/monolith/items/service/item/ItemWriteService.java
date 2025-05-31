@@ -21,6 +21,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import static com.revify.monolith.commons.messaging.KafkaTopic.ITEM_ADD_SHOPLIFT;
 import static com.revify.monolith.commons.messaging.KafkaTopic.ITEM_PROCESSING_MODEL;
 
 @Service
@@ -73,6 +74,11 @@ public class ItemWriteService {
                                     .build()
                     )
             );
+        }
+
+        //append item to the shoplifting system
+        if (itemCreationDTO.shoplift().getAddToShoplift()) {
+            kafkaTemplate.send(ITEM_ADD_SHOPLIFT, newItem.getId().toHexString());
         }
         fanoutNotificationProducer.sendFanout(FanoutMessageBody.builder()
                 .title("Created new item")

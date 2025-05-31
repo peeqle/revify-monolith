@@ -84,7 +84,7 @@ public class StripeRecipientManagementService implements RecipientProcessor<Cust
         }
         Price price = payment.getPrice();
         //value in USD
-        BigDecimal bigDecimal = currencyService.convertTo(price.getCurrency(), Currency.USD, price.getAmount().doubleValue())
+        BigDecimal bigDecimal = currencyService.convertTo(price.getCurrency(), price.getAmount().doubleValue(), Currency.USD)
                 .multiply(BigDecimal.valueOf(100.0));
 
         PaymentIntentCreateParams params =

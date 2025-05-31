@@ -6,6 +6,7 @@ import com.revify.monolith.geo.model.GeoLocation;
 import com.revify.monolith.geo.model.Place;
 import com.revify.monolith.geo.model.StoredGeoLocation;
 import com.revify.monolith.geo.model.UserGeolocation;
+import com.revify.monolith.geo.model.shared.Destination;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.bson.types.ObjectId;
@@ -45,13 +46,21 @@ public class GeolocationService {
         return mongoTemplate.findOne(query, GeoLocation.class);
     }
 
+    public GeoLocation resolveLocation(Destination destination) {
+        return resolveLocation(destination.getLat(), destination.getLon());
+    }
+
     public GeoLocation resolveLocation(Double latitude, Double longitude) {
+        if (latitude == null || longitude == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+
         StoredGeoLocation forCoordinates = findForCoordinates(latitude, longitude);
         if (forCoordinates == null) {
             Place place = nominatimService.readGeolocationAddress(latitude, longitude);
             if (place != null) {
                 GeoLocation geoLocation = mapGeolocation(place);
-                geoLocation.setLocation(new GeoJsonPoint(longitude, latitude));
+                geoLocation.setLocation(new GeoJsonPoint(latitude, longitude));
 
                 forCoordinates = mongoTemplate.save(StoredGeoLocation.with(geoLocation));
             } else {
@@ -87,7 +96,7 @@ public class GeolocationService {
     }
 
     public StoredGeoLocation findForCoordinates(Double lat, Double lon) {
-        Query query = Query.query(Criteria.where("geoLocation.location").near(new GeoJsonPoint(lon, lat)).maxDistance(100.0));
+        Query query = Query.query(Criteria.where("geoLocation.location").near(new GeoJsonPoint(lat, lon)).maxDistance(100.0));
         return mongoTemplate.findOne(query, StoredGeoLocation.class);
     }
 

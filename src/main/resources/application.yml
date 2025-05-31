@@ -19,8 +19,8 @@ spring:
       max-request-size: 40MB
   datasource:
     driver-class-name: org.postgresql.Driver
-    password: password
-    username: root
+    password: ${POSTGRES_PASSWORD:password}
+    username: ${POSTGRES_USERNAME:root}
     url: ${POSTGRES_URL:jdbc:postgresql://localhost:5433/revify?currentSchema=system}
   jpa:
     show-sql: true

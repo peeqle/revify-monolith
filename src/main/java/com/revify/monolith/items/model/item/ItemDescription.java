@@ -1,6 +1,7 @@
 package com.revify.monolith.items.model.item;
 
 import com.revify.monolith.commons.finance.Price;
+import com.revify.monolith.commons.items.Category;
 import com.revify.monolith.geo.model.GeoLocation;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,7 +18,7 @@ public class ItemDescription {
     private String title;
     private String description;
 
-    private Set<String> categories;
+    private Set<Category> categories;
     private String shopReference;
     private String url;
 

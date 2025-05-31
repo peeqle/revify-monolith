@@ -48,7 +48,11 @@ public class CurrencyService {
                 .build();
     }
 
-    public BigDecimal convertTo(Currency from, Currency to, Double amount) {
+    public BigDecimal convertTo(Price from, Currency to) {
+        return convertTo(from.getCurrency().getName(), from.getAmount(), to.getName());
+    }
+
+    public BigDecimal convertTo(Currency from, Double amount, Currency to) {
         return convertTo(from.getName(), to.getName(), amount);
     }
 

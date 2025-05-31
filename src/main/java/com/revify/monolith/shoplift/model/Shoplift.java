@@ -1,0 +1,62 @@
+package com.revify.monolith.shoplift.model;
+
+import com.revify.monolith.commons.finance.Currency;
+import com.revify.monolith.commons.finance.Price;
+import com.revify.monolith.commons.items.Category;
+import com.revify.monolith.geo.model.GeoLocation;
+import com.revify.monolith.shoplift.model.req.Create_Shoplift;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.bson.types.ObjectId;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import java.util.Set;
+
+@Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+@Document("shoplift")
+public class Shoplift {
+    @Id
+    private ObjectId id;
+    private String shopId;
+
+    private Long courierId;
+    private Set<Long> additionalCourierIds;
+
+    private GeoLocation destination;
+
+    private Set<Category> presentCategories;
+    private Set<Category> projectedCategories;
+
+    private Set<String> connectedItems;
+
+    private Price minEntryDeliveryPrice;
+    private Price EURminEntryDeliveryPrice;
+    private Integer entries;
+
+    private Long deliveryCutoffTime;
+    private Long createdAt;
+    private Long updatedAt;
+
+    private Price cumulativePrice;
+
+    private Boolean isRecurrent;
+    private Boolean allowedSystemAppend;
+
+    public static Shoplift from(Create_Shoplift createShoplift) {
+        return Shoplift.builder()
+                .shopId(createShoplift.getShopId())
+                .minEntryDeliveryPrice(Price.builder()
+                        .withCurrency(Currency.from(createShoplift.getCurrency()))
+                        .withAmount(createShoplift.getMinEntryDeliveryPrice())
+                        .build())
+                .entries(createShoplift.getMaxEntries())
+                .deliveryCutoffTime(createShoplift.getDeliveryCutoffTime())
+                .build();
+    }
+}

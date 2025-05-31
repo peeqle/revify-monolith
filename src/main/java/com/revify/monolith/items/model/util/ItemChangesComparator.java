@@ -1,10 +1,13 @@
 package com.revify.monolith.items.model.util;
 
 
+import com.revify.monolith.commons.items.Category;
 import com.revify.monolith.geo.model.GeoLocation;
 import com.revify.monolith.commons.items.ItemDescriptionDTO;
 import com.revify.monolith.items.model.item.ItemDescription;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
+
+import java.util.stream.Collectors;
 
 import static com.revify.monolith.items.model.util.ComparisonUtils.*;
 
@@ -51,7 +54,7 @@ public class ItemChangesComparator {
             initial.setDescription(dto.getDescription());
         }
         if (dto.getCategories() != null) {
-            initial.setCategories(dto.getCategories());
+            initial.setCategories(dto.getCategories().stream().map(Category::valueOf).collect(Collectors.toSet()));
         }
         if (dto.getShopReference() != null) {
             initial.setShopReference(dto.getShopReference());

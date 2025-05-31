@@ -25,6 +25,7 @@ public interface KafkaTopic {
 
     String ITEM_STATUS_TRACKER = "item_status";
     String ITEM_PROCESSING_MODEL = "item_processing_model";
+    String ITEM_ADD_SHOPLIFT = "item_add_shoplift";
     String ITEM_PROCESSING_RESPONSE = "item_processing_response";
 
     String MESSAGES_CHANNEL = "messages_channel";
