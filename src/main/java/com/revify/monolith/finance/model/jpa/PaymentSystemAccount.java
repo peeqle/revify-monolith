@@ -17,6 +17,7 @@ import java.util.List;
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "payment_system_type", discriminatorType = DiscriminatorType.STRING)
+@DiscriminatorValue("BASE")
 public class PaymentSystemAccount {
 
     @Id
