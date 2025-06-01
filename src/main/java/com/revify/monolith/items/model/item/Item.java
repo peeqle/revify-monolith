@@ -20,8 +20,6 @@ public class Item implements Serializable {
 
     private ItemDescription itemDescription = new ItemDescription();
 
-    private ItemPremium itemPremium;
-
     private List<String> referenceUrl = new ArrayList<>();
 
     private Price price;
@@ -34,4 +32,6 @@ public class Item implements Serializable {
     private boolean isPicked = false;
     private boolean isActive = true;
     private boolean isManuallyToggled = false;
+
+    private String shopliftId;
 }

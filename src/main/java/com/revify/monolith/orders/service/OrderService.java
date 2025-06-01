@@ -2,13 +2,13 @@ package com.revify.monolith.orders.service;
 
 import com.revify.monolith.commons.auth.sync.UserUtils;
 import com.revify.monolith.commons.messaging.KafkaTopic;
-import com.revify.monolith.commons.messaging.dto.BillingCreation;
 import com.revify.monolith.commons.messaging.dto.FanoutMessageBody;
-import com.revify.monolith.commons.messaging.dto.ItemBillingCreation;
 import com.revify.monolith.commons.models.bid.AuctionCreationRequest;
 import com.revify.monolith.commons.models.bid.PathFragment;
-import com.revify.monolith.commons.models.orders.*;
-import com.revify.monolith.finance.PaymentService;
+import com.revify.monolith.commons.models.orders.OrderCreationDTO;
+import com.revify.monolith.commons.models.orders.OrderShipmentParticle;
+import com.revify.monolith.commons.models.orders.OrderShipmentStatus;
+import com.revify.monolith.commons.models.orders.OrderStatusUpdateRequest;
 import com.revify.monolith.finance.service.OrderPaymentService;
 import com.revify.monolith.notifications.connector.producers.FanoutNotificationProducer;
 import com.revify.monolith.orders.models.Delay;
@@ -32,6 +32,8 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static com.revify.monolith.orders.models.utils.OrderUtils.findShipmentParticle;
 
 @Slf4j
 @Service
@@ -67,7 +69,7 @@ public class OrderService {
         }
 
         saveShipmentParticles(order);
-        orderPaymentService.createPayment(order);
+        orderPaymentService.processPayment(order);
 
         return order;
     }
@@ -76,7 +78,7 @@ public class OrderService {
         var head = order.getShipmentParticle();
         while (head != null && head.getNext() != null) {
             PathSegment pathSegment = new PathSegment();
-            pathSegment.setReceiverId(order.getReceiverId());
+            pathSegment.setReceivers(order.getReceivers());
             pathSegment.setCourierId(head.getCourierId());
             pathSegment.setAcceptedCourierId(null);
 
@@ -87,6 +89,7 @@ public class OrderService {
             pathSegment.setIsAcceptedByCustomer(true);
             pathSegment.setIsCompleted(false);
             pathSegment.setIsArchived(false);
+            pathSegment.setIsShoplift(order.getIsShoplift());
 
             mongoTemplate.save(pathSegment);
             head = head.getNext();
@@ -138,11 +141,12 @@ public class OrderService {
      * @param orderId
      * @return
      */
+    //TODO ADAPT
     public Order deleteOrder(ObjectId orderId) {
         Order existingOrder = findOrderById(orderId);
-        Tuple2<Integer, OrderShipmentParticle> shipmentParticle = existingOrder.findShipmentParticle(UserUtils.getUserId());
+        Tuple2<Integer, OrderShipmentParticle> shipmentParticle = findShipmentParticle(UserUtils.getUserId(), existingOrder.getShipmentParticle());
 
-        if (shipmentParticle != null) {
+        if (shipmentParticle != null && !existingOrder.getIsShoplift()) {
             shipmentParticle = existingOrder.removeShipmentParticle(UserUtils.getUserId());
             OrderShipmentParticle particle = shipmentParticle._2;
 
@@ -160,8 +164,8 @@ public class OrderService {
                                     .build())
                             //TODO decide how to calculate time
                             .bidsAcceptingTill(particle.getDeliveryTimeEstimated())
-                            .itemId(existingOrder.getItemId())
-                            .userId(existingOrder.getReceiverId())
+                            .itemId(existingOrder.getItems().stream().findFirst().orElseThrow())
+                            .userId(existingOrder.getReceivers().stream().findFirst().orElseThrow())
                             .maximumRequiredBidPrice(particle.getPrice())
                             .build()
             ).whenComplete((c, t) -> {
@@ -178,18 +182,14 @@ public class OrderService {
             updateOrderStatus(existingOrder.getId(), OrderShipmentStatus.AWAITING);
 
             return save;
-        } else if (existingOrder.getReceiverId().equals(UserUtils.getUserId())) {
-            sendFanoutNotification(
-                    "Status Updated",
-                    "Order ID: "
-            );
-
-            //todo calculate price
-            kafkaTemplate.send(KafkaTopic.BILLING_CREATION, ItemBillingCreation.builder()
-                    .itemId(existingOrder.getItemId())
-                    .billingStrategy(BillingCreation.BillingStrategy.REFUND)
-                    .build());
         }
+//        else if (existingOrder.getReceiverId().equals(UserUtils.getUserId())) {
+//            //todo calculate price
+//            kafkaTemplate.send(KafkaTopic.BILLING_CREATION, ItemBillingCreation.builder()
+//                    .itemId(existingOrder.getItemId())
+//                    .billingStrategy(BillingCreation.BillingStrategy.REFUND)
+//                    .build());
+//        }
 
         return existingOrder;
     }
@@ -222,21 +222,10 @@ public class OrderService {
         return order;
     }
 
-    private OrderStatusUpdateNotification buildNotification(Order order) {
-        return OrderStatusUpdateNotification.builder()
-                .orderId(order.getId().toHexString())
-                .itemId(order.getItemId())
-                .receiverId(order.getReceiverId())
-                .deliveryTimeEnd(order.getDeliveryTimeEnd())
-                .status(order.getStatus())
-                .build();
-    }
-
     private void sendFanoutNotification(String title, String body) {
         notificationProducer.sendFanout(FanoutMessageBody.builder()
                 .title(title)
                 .body(body)
                 .build());
     }
-
 }

@@ -47,17 +47,8 @@ public class ItemService {
         }
 
         ItemPremium newCombined = new ItemPremium();
-        ItemPremium existingPremium = existing.getItemPremium();
 
         Instant newDuration = Instant.now().plusMillis(Duration.getDuration(duration).toEpochMilli());
-        //combine premiums???
-        if (existingPremium != null) {
-
-            //combine two premiums if exists
-            newDuration = newDuration.plusMillis(Instant.ofEpochMilli(existingPremium.getDurationUntil())
-                    .minusMillis(Instant.now().toEpochMilli()).toEpochMilli());
-
-        }
         newCombined.setDurationUntil(newDuration.toEpochMilli());
 
         //expand item's lifetime

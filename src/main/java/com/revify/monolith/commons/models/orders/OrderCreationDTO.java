@@ -2,12 +2,14 @@ package com.revify.monolith.commons.models.orders;
 
 import lombok.Builder;
 
+import java.util.Collection;
+
 @Builder
-public record OrderCreationDTO (
-         Long receiverId,
-         String itemId,
-         OrderShipmentStatus status,
-         OrderAdditionalStatus additionalStatus,
-         OrderShipmentParticle shipmentParticle,
-         Long deliveryTimeEnd
-) { }
+public record OrderCreationDTO(
+        Collection<Long> receivers,
+        Collection<String> items,
+        OrderShipmentStatus status,
+        OrderAdditionalStatus additionalStatus,
+        OrderShipmentParticle shipmentParticle,
+        Long deliveryTimeEnd,
+        Boolean isShoplift) { }

@@ -8,6 +8,8 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.DocumentReference;
 
+import java.util.Set;
+
 @Data
 @Document("path_segment")
 public class PathSegment {
@@ -17,7 +19,7 @@ public class PathSegment {
     @DocumentReference
     @JsonIgnore
     private Order order;
-    private Long receiverId;
+    private Set<Long> receivers;
     private Long courierId;
     private Long acceptedCourierId;
     private OrderShipmentParticle particle;
@@ -31,4 +33,5 @@ public class PathSegment {
     private Boolean isAcceptedByCustomer = false;
     private Boolean isArchived = false;
     private Boolean isCompleted = false;
+    private Boolean isShoplift = false;
 }

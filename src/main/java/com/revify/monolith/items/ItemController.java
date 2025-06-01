@@ -63,7 +63,7 @@ public class ItemController {
     }
 
     @GetMapping("/many")
-    public ResponseEntity<List<ItemDTO>> getItems(@RequestBody List<ObjectId> itemIds) {
+    public ResponseEntity<List<ItemDTO>> getItems(@RequestBody List<String> itemIds) {
         List<Item> byId = itemReadService.findForIds(itemIds);
         if (byId != null && !byId.isEmpty()) {
             return ResponseEntity.ok(byId.stream().map(ItemDTO::from).toList());

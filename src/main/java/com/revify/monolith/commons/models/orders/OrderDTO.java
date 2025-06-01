@@ -3,20 +3,23 @@ package com.revify.monolith.commons.models.orders;
 
 import com.revify.monolith.orders.models.Order;
 
+import java.util.Collection;
+
 public record OrderDTO(
         String id,
-        Long receiverId,
-        String itemId,
+        Collection<Long> receivers,
+        Collection<String> items,
         OrderShipmentStatus status,
         OrderAdditionalStatus additionalStatus,
         Long deliveryTimeEnd,
         OrderShipmentParticle shipmentParticle,
         Boolean isSuspended,
-        Boolean isPaid
+        Boolean isPaid,
+        Boolean isShoplift
 ) {
     public static OrderDTO from(Order order) {
-        return new OrderDTO(order.getId().toHexString(), order.getReceiverId(), order.getItemId(), order.getStatus(),
+        return new OrderDTO(order.getId().toHexString(), order.getReceivers(), order.getItems(), order.getStatus(),
                 order.getAdditionalStatus(), order.getDeliveryTimeEnd(), order.getShipmentParticle(), order.getIsSuspended(),
-                order.getIsPaid());
+                order.getIsPaid(), order.getIsShoplift());
     }
 }

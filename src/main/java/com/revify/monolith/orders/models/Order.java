@@ -1,6 +1,5 @@
 package com.revify.monolith.orders.models;
 
-import com.revify.monolith.commons.finance.Price;
 import com.revify.monolith.commons.models.orders.OrderAdditionalStatus;
 import com.revify.monolith.commons.models.orders.OrderCreationDTO;
 import com.revify.monolith.commons.models.orders.OrderShipmentParticle;
@@ -17,24 +16,26 @@ import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.math.BigDecimal;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
+
+import static com.revify.monolith.orders.models.utils.OrderUtils.findShipmentParticle;
 
 @Data
 @Builder
-@Document(collection = "order")
 @AllArgsConstructor
 @NoArgsConstructor
-public class Order {
 
+@Document(collection = "order")
+public class Order {
     @Id
     private ObjectId id;
 
     @NotNull
-    private Long receiverId;
+    private Set<Long> receivers;
 
     @NotNull
-    private String itemId;
+    private Set<String> items;
 
     private OrderShipmentStatus status = OrderShipmentStatus.CREATED;
     private OrderAdditionalStatus additionalStatus;
@@ -53,6 +54,7 @@ public class Order {
 
     private Boolean isSuspended = false;
     private Boolean isPaid = false;
+    private Boolean isShoplift = false;
 
     public void addShipmentParticle(OrderShipmentParticle particle) {
         if (particle != null) {
@@ -96,26 +98,7 @@ public class Order {
         }
         return head;
     }
-    /**index & particle
-     * @param courierId
-     * @return index & particle
-     */
-    public Tuple2<Integer, OrderShipmentParticle> findShipmentParticle(Long courierId) {
-        return findShipmentParticle(0, this.shipmentParticle, courierId);
-    }
 
-
-
-    public Tuple2<Integer, OrderShipmentParticle> findShipmentParticle(int index, OrderShipmentParticle current, Long courierId) {
-        if (current == null) {
-            return Tuple.of(index, null);
-        }
-
-        if (current.getCourierId().equals(courierId)) {
-            return Tuple.of(index, current);
-        }
-        return findShipmentParticle(index + 1, current.getNext(), courierId);
-    }
 
     public static Order from(OrderCreationDTO creationDTO) {
         if (creationDTO == null) {
@@ -128,10 +111,9 @@ public class Order {
                 .createdAt(currentTime)
                 .updatedAt(currentTime)
                 .status(creationDTO.status())
-                .itemId(creationDTO.itemId())
+                .items(creationDTO.itemId())
                 .deliveryTimeEnd(creationDTO.deliveryTimeEnd())
                 .additionalStatus(creationDTO.additionalStatus())
-                .receiverId(creationDTO.receiverId())
                 .build();
 
         build.addShipmentParticle(creationDTO.shipmentParticle());

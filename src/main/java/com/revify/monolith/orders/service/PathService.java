@@ -30,6 +30,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 
+import static com.revify.monolith.orders.models.utils.OrderUtils.findShipmentParticle;
+
 @Service
 @RequiredArgsConstructor
 public class PathService {
@@ -85,7 +87,8 @@ public class PathService {
         PathSegment pathSegment = mongoTemplate.findOne(Query.query(Criteria.where("_id").is(fragmentId)), PathSegment.class);
         if (pathSegment != null) {
             Order pathRelatedOrder = pathSegment.getOrder();
-            if (pathRelatedOrder.getReceiverId() != UserUtils.getUserId()) {
+            if (pathRelatedOrder.getReceivers() == null || pathRelatedOrder.getReceivers().isEmpty() ||
+                    !pathRelatedOrder.getReceivers().contains(UserUtils.getUserId())) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN);
             }
             if (statusChanges.containsKey("isAcceptedByCustomer")) {
@@ -123,7 +126,7 @@ public class PathService {
 
         BigDecimal priceCoefficient;
 
-        Tuple2<Integer, OrderShipmentParticle> shipmentParticle = orderById.findShipmentParticle(UserUtils.getUserId());
+        Tuple2<Integer, OrderShipmentParticle> shipmentParticle = findShipmentParticle(UserUtils.getUserId(), orderById.getShipmentParticle());
         var current = shipmentParticle._2;
         var next = shipmentParticle._2.getNext();
         if (next != null) {
@@ -197,7 +200,7 @@ public class PathService {
             currentPrice.setAmount(currentPrice.getAmount().subtract(newParticlePrice.getAmount()));
         }
         current.setTo(geoLocation);
-        
+
         newShipmentParticle.isSplit(true);
         newShipmentParticle.next(next);
         OrderShipmentParticle built = newShipmentParticle.build();
@@ -212,7 +215,7 @@ public class PathService {
 
 
         mongoTemplate.save(orderById);
-        pathSegment.setReceiverId(orderById.getReceiverId());
+        pathSegment.setReceivers(orderById.getReceivers());
         return mongoTemplate.save(pathSegment);
     }
 

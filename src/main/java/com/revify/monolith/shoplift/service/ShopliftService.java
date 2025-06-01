@@ -12,23 +12,30 @@ import com.revify.monolith.items.service.item.ItemReadService;
 import com.revify.monolith.shoplift.model.Filter;
 import com.revify.monolith.shoplift.model.Shop;
 import com.revify.monolith.shoplift.model.Shoplift;
+import com.revify.monolith.shoplift.model.req.Accept_Shoplift;
 import com.revify.monolith.shoplift.model.req.Create_Shoplift;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.bson.types.ObjectId;
+import org.flywaydb.core.internal.schemahistory.SchemaHistory;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
+import org.springframework.http.HttpStatus;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static com.revify.monolith.commons.messaging.KafkaTopic.ITEM_ADD_SHOPLIFT;
 
@@ -44,6 +51,8 @@ public class ShopliftService {
     private final ItemReadService itemReadService;
 
     private final CurrencyService currencyService;
+
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
     @KafkaListener(topics = ITEM_ADD_SHOPLIFT)
     public void addItem(@Payload String itemId) {
@@ -68,6 +77,31 @@ public class ShopliftService {
         Set<Category> categories = byId.getItemDescription().getCategories();
         if (categories.isEmpty()) {
             throw new RuntimeException("Category not found");
+        }
+    }
+
+    public void acceptShoplifting(Accept_Shoplift req) {
+        if (req.getItems() == null || req.getItems().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing 'items' field");
+        }
+        Shoplift shoplift = mongoTemplate.findById(new ObjectId(req.getShopliftId()), Shoplift.class);
+        if(shoplift == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing 'shopliftId' field");
+        }
+
+        List<Item> existingItems = itemReadService.findForIds(req.getItems());
+        for(Item item : existingItems) {
+            shoplift.getConnectedItems().add(item.getId().toHexString());
+
+            item.setPicked(true);
+            item.setShopliftId(shoplift.getId().toHexString());
+            mongoTemplate.save(item);
+        }
+
+        mongoTemplate.save(shoplift);
+
+        {
+
         }
     }
 

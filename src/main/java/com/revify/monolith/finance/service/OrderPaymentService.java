@@ -33,31 +33,60 @@ public class OrderPaymentService {
 
     private final CurrencyService currencyService;
 
-    public void createPayment(Order order) {
-        List<PaymentSystemAccount> paymentSystemAccounts = recipientService.fetchForUser(order.getReceiverId());
+    public void processPayment(Order order) {
+        List<Item> itemsInvolved = itemReadService.findForIds(order.getItems());
+        if (itemsInvolved.isEmpty()) {
+            throw new RuntimeException("No items involved");
+        }
+
+        var base = itemsInvolved.getFirst().getPrice();
+        {
+            base.setAmount(BigDecimal.ZERO);
+            var head = order.getShipmentParticle();
+            while (head != null && head.getNext() != null) {
+                Price headPrice = head.getPrice();
+                if (!base.getCurrency().equals(headPrice.getCurrency())) {
+                    BigDecimal bigDecimal = currencyService.convertTo(headPrice.getCurrency().getName(), base.getCurrency().getName(), headPrice.getAmount().doubleValue());
+                    base.setAmount(base.getAmount().add(bigDecimal));
+                }
+                head = head.getNext();
+            }
+        }
+
+        if (order.getIsShoplift()) {
+            for (Long receiverId : order.getReceivers()) {
+                createPayment(order.getId().toHexString(),
+                        receiverId,
+                        itemsInvolved.stream().filter(e -> e.getCreatorId().equals(receiverId)).toList(),
+                        base);
+            }
+        }
+    }
+
+    //todo optimize for adding payment account after payment creation
+    public void createPayment(String orderId, Long receiver, List<Item> userItems, Price base) {
+        List<PaymentSystemAccount> paymentSystemAccounts = recipientService.fetchForUser(receiver);
         if (paymentSystemAccounts.isEmpty()) {
             return;
         }
         for (PaymentSystemAccount paymentSystemAccount : paymentSystemAccounts) {
             Payment payment = new Payment();
             {
-                Item byId = itemReadService.findById(order.getItemId());
-                var base = byId.getPrice();
-                var head = order.getShipmentParticle();
-                while (head != null && head.getNext() != null) {
-                    Price headPrice = head.getPrice();
-                    if (!base.getCurrency().equals(headPrice.getCurrency())) {
-                        BigDecimal bigDecimal = currencyService.convertTo(headPrice.getCurrency().getName(), base.getCurrency().getName(), headPrice.getAmount().doubleValue());
-                        base.setAmount(base.getAmount().add(bigDecimal));
+                for (Item item : userItems) {
+                    var itemPrice = item.getPrice();
+                    if (!itemPrice.getCurrency().equals(base.getCurrency())) {
+                        base.setAmount(base.getAmount().add(currencyService.convertTo(itemPrice, base.getCurrency())));
+                    } else {
+                        base.setAmount(base.getAmount().add(itemPrice.getAmount()));
                     }
-                    head = head.getNext();
                 }
+
                 payment.setPrice(base);
             }
-            payment.setOrderId(order.getId().toHexString());
+            payment.setOrderId(orderId);
             payment.setExecutionStatus(PaymentExecutionStatus.WAITING);
             payment.setCreatedAt(Instant.now().toEpochMilli());
-            payment.setDescription("Payment for REVIFY order" + order.getId().toHexString());
+            payment.setDescription("Payment for REVIFY order" + orderId);
             PaymentSystemAccount psa;
 
             if (paymentSystemAccount instanceof BePaidPaymentSystemAccount) {

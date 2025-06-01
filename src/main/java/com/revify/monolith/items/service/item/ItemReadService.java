@@ -18,6 +18,7 @@ import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 
 @Service
@@ -36,8 +37,9 @@ public class ItemReadService {
         return mongoTemplate.findById(id, Item.class);
     }
 
-    public List<Item> findForIds(List<ObjectId> ids) {
-        Query query = Query.query(Criteria.where("_id").in(ids)
+
+    public List<Item> findForIds(Collection<String> ids) {
+        Query query = Query.query(Criteria.where("_id").in(ids.stream().map(ObjectId::new).toArray())
                 .and("isActive").is(true));
         return mongoTemplate.find(query, Item.class);
     }
