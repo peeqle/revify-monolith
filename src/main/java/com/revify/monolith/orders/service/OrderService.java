@@ -1,5 +1,8 @@
 package com.revify.monolith.orders.service;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 import com.revify.monolith.commons.auth.sync.UserUtils;
 import com.revify.monolith.commons.messaging.KafkaTopic;
 import com.revify.monolith.commons.messaging.dto.FanoutMessageBody;
@@ -9,6 +12,8 @@ import com.revify.monolith.commons.models.orders.OrderCreationDTO;
 import com.revify.monolith.commons.models.orders.OrderShipmentParticle;
 import com.revify.monolith.commons.models.orders.OrderShipmentStatus;
 import com.revify.monolith.commons.models.orders.OrderStatusUpdateRequest;
+import com.revify.monolith.config.messaging.RabbitMqEndpointsConfiguration;
+import com.revify.monolith.finance.messaging.DelayProducer;
 import com.revify.monolith.finance.service.OrderPaymentService;
 import com.revify.monolith.notifications.connector.producers.FanoutNotificationProducer;
 import com.revify.monolith.orders.models.Delay;
@@ -19,6 +24,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.bson.types.ObjectId;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -31,6 +38,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.revify.monolith.orders.models.utils.OrderUtils.findShipmentParticle;
@@ -44,12 +52,27 @@ public class OrderService {
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
+    private final DelayProducer delayProducer;
+
     private final DelayService delayService;
 
     private final OrderPaymentService orderPaymentService;
 
     //todo remove and use direct, when normal integration utils arise
     private final FanoutNotificationProducer notificationProducer;
+
+    private final Gson gson = new GsonBuilder().create();
+
+    @RabbitListener(queues = RabbitMqEndpointsConfiguration.ORDER_SUMMARY)
+    public void handleOrderFinalization(String messagePayload, Message message) {
+        TypeToken<Map<String, String>> type = new TypeToken<>() {
+        };
+        Map<String, String> stringStringMap = gson.fromJson(messagePayload, type);
+        if (stringStringMap != null && stringStringMap.containsKey("orderId")) {
+            //check all payments for order
+            //if some is missing - remove and start order
+        }
+    }
 
     public void activateOrder(String orderId) {
         Order orderById = findOrderById(new ObjectId(orderId));
@@ -66,6 +89,10 @@ public class OrderService {
         Order order = mongoTemplate.save(Order.from(orderDto));
         if (order.getId() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order creation failed");
+        }
+        {
+            delayProducer.sendOrderSummarization(order.getId().toHexString(), orderDto.paymentsCutoff() == null ?
+                    Instant.now().plus(3, ChronoUnit.DAYS).toEpochMilli() - Instant.now().toEpochMilli() : orderDto.paymentsCutoff());
         }
 
         saveShipmentParticles(order);
@@ -201,6 +228,10 @@ public class OrderService {
             return mongoTemplate.save(applyCourierAssignment(orderById, courierId));
         }
         return null;
+    }
+
+    public Order findOrderById(String orderId) {
+        return findOrderById(new ObjectId(orderId));
     }
 
     public Order findOrderById(ObjectId orderId) {

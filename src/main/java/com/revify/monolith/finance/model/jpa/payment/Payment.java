@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -50,9 +51,12 @@ public class Payment implements Serializable {
     private PaymentExecutionStatus executionStatus;
 
     private Long createdAt;
-
     private Long executedAt;
 
     @Column(nullable = false)
     private String orderId;
+
+    @Column(nullable = false)
+    @ElementCollection
+    private List<String> items;
 }

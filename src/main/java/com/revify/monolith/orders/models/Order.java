@@ -49,6 +49,9 @@ public class Order {
     @NotNull(message = "Delivery time must persist")
     private Long deliveryTimeEnd;
 
+    @Positive
+    private Long paymentsCutoff;
+
     private Long createdAt;
     private Long updatedAt;
 
@@ -111,9 +114,11 @@ public class Order {
                 .createdAt(currentTime)
                 .updatedAt(currentTime)
                 .status(creationDTO.status())
-                .items(creationDTO.itemId())
+                .items(new HashSet<>(creationDTO.items()))
+                .receivers(new HashSet<>(creationDTO.receivers()))
                 .deliveryTimeEnd(creationDTO.deliveryTimeEnd())
                 .additionalStatus(creationDTO.additionalStatus())
+                .paymentsCutoff(creationDTO.paymentsCutoff())
                 .build();
 
         build.addShipmentParticle(creationDTO.shipmentParticle());

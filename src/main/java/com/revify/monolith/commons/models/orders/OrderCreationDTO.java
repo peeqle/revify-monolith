@@ -11,5 +11,6 @@ public record OrderCreationDTO(
         OrderShipmentStatus status,
         OrderAdditionalStatus additionalStatus,
         OrderShipmentParticle shipmentParticle,
+        Long paymentsCutoff,
         Long deliveryTimeEnd,
         Boolean isShoplift) { }
