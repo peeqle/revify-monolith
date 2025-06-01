@@ -1,7 +1,6 @@
 package com.revify.monolith.items.utils;
 
 import com.revify.monolith.commons.finance.Price;
-import com.revify.monolith.commons.items.Category;
 import com.revify.monolith.commons.items.ItemCreationDTO;
 import com.revify.monolith.commons.items.ItemDTO;
 import com.revify.monolith.commons.items.ItemDescriptionDTO;
@@ -12,7 +11,6 @@ import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 
 import java.time.Instant;
 import java.util.Collections;
-import java.util.stream.Collectors;
 
 public class ItemUtils {
 
@@ -65,7 +63,7 @@ public class ItemUtils {
                         .title(itemCreation.description().getTitle())
 
                         .url(itemCreation.description().getUrl())
-                        .categories(itemCreation.description().getCategories().stream().map(Category::valueOf).collect(Collectors.toSet()))
+                        .categories(itemCreation.description().getCategories())
                         .shopReference(itemCreation.description().getShopReference())
 
                         .compositeStackingEnabled(itemCreation.description().getCompositeStackingEnabled())

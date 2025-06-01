@@ -18,12 +18,7 @@ public class ShopliftController {
 
     private final ShopliftService shopliftService;
 
-    @GetMapping("/filters")
-    public ResponseEntity<Filter> getFilter() {
-        return ResponseEntity.ok(new Filter());
-    }
-
-    @GetMapping("/find")
+    @PostMapping("/find")
     public ResponseEntity<List<Shoplift>> findToDestination(@RequestBody Filter filter) {
         return ResponseEntity.ok(shopliftService.find(filter));
     }
@@ -41,10 +36,4 @@ public class ShopliftController {
     //courier request to join room for items
 
     //block and delete items from user
-
-    //payment creation for items
-
-    //limited time and expiry for items payments
-
-    //split delivery on room? so one courier is buying and other can deliver the items? insane?
 }

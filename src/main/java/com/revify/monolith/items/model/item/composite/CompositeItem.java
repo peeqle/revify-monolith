@@ -1,6 +1,7 @@
 package com.revify.monolith.items.model.item.composite;
 
 import com.revify.monolith.commons.finance.Price;
+import com.revify.monolith.commons.items.Category;
 import com.revify.monolith.geo.model.GeoLocation;
 import lombok.Data;
 import org.bson.types.ObjectId;
@@ -29,7 +30,7 @@ public class CompositeItem {
     private GeoLocation destination;
 
     private Set<String> itemsInvolved = new HashSet<>();
-    private Set<String> itemsCategories = new HashSet<>();
+    private Set<Category> itemsCategories = new HashSet<>();
 
     private Price overallCost = Price.defaultPrice();
 

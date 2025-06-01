@@ -17,7 +17,7 @@ public class ItemDescriptionDTO {
     private String title;
     private String description;
 
-    private Set<String> categories;
+    private Set<Category> categories;
     private String shopReference;
     private String url;
 

@@ -21,6 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -52,8 +53,8 @@ public class OrderProducer {
         builder.deliveryTimeEstimated(1000L * 60 * 60 * 24 * 7);
 
         kafkaTemplate.send(KafkaTopic.ORDER_MODEL_CREATION, gson.toJson(OrderCreationDTO.builder()
-                .receiverId(auction.getCreatorId())
-                .itemId(auction.getItemId())
+                .receivers(List.of(auction.getCreatorId()))
+                .items(List.of(auction.getItemId()))
                 .deliveryTimeEnd(Instant.now().plus(7, ChronoUnit.DAYS).toEpochMilli())
                 .status(OrderShipmentStatus.CREATED)
                 .additionalStatus(OrderAdditionalStatus.CLIENT_PAYMENT_AWAIT)

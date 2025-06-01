@@ -41,7 +41,7 @@ public class CurrencyService {
                     .build();
         }
 
-        var secondConvertedAmount = convertTo(second.getCurrency().getName(), first.getCurrency().getName(), second.getAmount().doubleValue());
+        var secondConvertedAmount = convertTo(second, first.getCurrency());
         return Price.builder()
                 .withCurrency(first.getCurrency())
                 .withAmount(first.getAmount().add(secondConvertedAmount))
@@ -49,14 +49,10 @@ public class CurrencyService {
     }
 
     public BigDecimal convertTo(Price from, Currency to) {
-        return convertTo(from.getCurrency().getName(), from.getAmount(), to.getName());
+        return convertTo(from.getCurrency().getName(), from.getAmount().doubleValue(), to.getName());
     }
 
-    public BigDecimal convertTo(Currency from, Double amount, Currency to) {
-        return convertTo(from.getName(), to.getName(), amount);
-    }
-
-    public BigDecimal convertTo(String from, String to, Double amount) {
+    public BigDecimal convertTo(String from, Double amount, String to) {
         CurrencySnapshot currencyTo = findCurrency(to);
         CurrencySnapshot currencyFrom = findCurrency(from);
         if (currencyTo == null || currencyFrom == null) {
@@ -70,8 +66,8 @@ public class CurrencyService {
             return operand.compare(first.getAmount(), second.getAmount());
         }
 
-        BigDecimal convertedFirst = convertTo(first.getCurrency().getName(), BASE_FIAT, first.getAmount().doubleValue());
-        BigDecimal bigDecimal = convertTo(second.getCurrency().getName(), BASE_FIAT, second.getAmount().doubleValue());
+        BigDecimal convertedFirst = convertTo(first, Currency.from(BASE_FIAT));
+        BigDecimal bigDecimal = convertTo(second, Currency.from(BASE_FIAT));
 
         return operand.compare(convertedFirst, bigDecimal);
     }

@@ -54,7 +54,7 @@ public class ItemChangesComparator {
             initial.setDescription(dto.getDescription());
         }
         if (dto.getCategories() != null) {
-            initial.setCategories(dto.getCategories().stream().map(Category::valueOf).collect(Collectors.toSet()));
+            initial.setCategories(dto.getCategories());
         }
         if (dto.getShopReference() != null) {
             initial.setShopReference(dto.getShopReference());

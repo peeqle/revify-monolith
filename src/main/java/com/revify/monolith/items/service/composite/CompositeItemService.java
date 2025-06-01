@@ -1,6 +1,7 @@
 package com.revify.monolith.items.service.composite;
 
 import com.revify.monolith.commons.auth.sync.UserUtils;
+import com.revify.monolith.commons.items.Category;
 import com.revify.monolith.commons.messaging.dto.TopicMessageBody;
 import com.revify.monolith.currency_reader.service.CurrencyService;
 import com.revify.monolith.items.model.item.Item;
@@ -143,6 +144,7 @@ public class CompositeItemService {
                 if (value instanceof List<?> list) {
                     item.setItemsCategories(new HashSet<>(list.stream()
                             .map(Object::toString)
+                            .map(Category::valueOf)
                             .collect(Collectors.toSet())));
                 }
             }

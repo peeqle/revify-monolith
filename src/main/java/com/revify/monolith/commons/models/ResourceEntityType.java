@@ -6,6 +6,7 @@ import lombok.Getter;
 public enum ResourceEntityType {
     ITEM,
     USER,
+    SHOP,
     POST,
     GROUP;
 }

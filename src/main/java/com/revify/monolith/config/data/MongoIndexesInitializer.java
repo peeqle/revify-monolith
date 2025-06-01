@@ -47,6 +47,6 @@ public class MongoIndexesInitializer {
                 .ensureIndex(new GeospatialIndex("particle.to.location").typed(GeoSpatialIndexType.GEO_2DSPHERE));
 
         mongoTemplate.indexOps(Shoplift.class)
-                .ensureIndex(new GeospatialIndex("particle.destination.location").typed(GeoSpatialIndexType.GEO_2DSPHERE));
+                .ensureIndex(new GeospatialIndex("destination.location").typed(GeoSpatialIndexType.GEO_2DSPHERE));
     }
 }
