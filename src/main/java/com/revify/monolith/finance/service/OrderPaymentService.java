@@ -103,8 +103,7 @@ public class OrderPaymentService {
 
         if (order.getIsShoplift()) {
             for (Long receiverId : order.getReceivers()) {
-                createPayment(order.getId().toHexString(),
-                        receiverId,
+                createPayment(order, receiverId,
                         itemsInvolved.stream().filter(e -> e.getCreatorId().equals(receiverId)).toList(),
                         base);
             }
@@ -112,7 +111,7 @@ public class OrderPaymentService {
     }
 
     //todo optimize for adding payment account after payment creation
-    public void createPayment(String orderId, Long receiver, List<Item> userItems, Price base) {
+    public void createPayment(Order order, Long receiver, List<Item> userItems, Price base) {
         List<PaymentSystemAccount> paymentSystemAccounts = recipientService.fetchForUser(receiver);
         if (paymentSystemAccounts.isEmpty()) {
             return;
@@ -131,10 +130,10 @@ public class OrderPaymentService {
                 payment.setItems(userItems.stream().map(Item::getId).map(ObjectId::toHexString).collect(Collectors.toList()));
                 payment.setPrice(base);
             }
-            payment.setOrderId(orderId);
+            payment.setOrderId(order.getId().toHexString());
             payment.setExecutionStatus(PaymentExecutionStatus.WAITING);
             payment.setCreatedAt(Instant.now().toEpochMilli());
-            payment.setDescription("Payment for REVIFY order" + orderId);
+            payment.setDescription("Payment for REVIFY order" + order.getId().toHexString());
             PaymentSystemAccount psa;
 
             if (paymentSystemAccount instanceof BePaidPaymentSystemAccount) {
@@ -148,9 +147,15 @@ public class OrderPaymentService {
 
             Payment save = paymentRepository.save(payment);
 
-            delayProducer.sendPaymentExpirationMessage(save.getId().toString(),
-                    Instant.now().plus(1, ChronoUnit.DAYS).toEpochMilli() - Instant.now().toEpochMilli());
+            delayProducer.sendPaymentExpirationMessage(save.getId().toString(), order.getPaymentsCutoff() == null ?
+                    2 * 1000 * 60 * 60 * 24 : order.getPaymentsCutoff());
         }
+    }
+
+
+    public List<Payment> findForOrder(String orderId) {
+        return paymentRepository.findByOrderId(orderId);
+
     }
 
     public List<Payment> getUserPayments(Integer offset, Integer limit) {

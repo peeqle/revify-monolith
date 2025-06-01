@@ -8,12 +8,12 @@ import com.revify.monolith.commons.messaging.KafkaTopic;
 import com.revify.monolith.commons.messaging.dto.FanoutMessageBody;
 import com.revify.monolith.commons.models.bid.AuctionCreationRequest;
 import com.revify.monolith.commons.models.bid.PathFragment;
-import com.revify.monolith.commons.models.orders.OrderCreationDTO;
-import com.revify.monolith.commons.models.orders.OrderShipmentParticle;
-import com.revify.monolith.commons.models.orders.OrderShipmentStatus;
-import com.revify.monolith.commons.models.orders.OrderStatusUpdateRequest;
+import com.revify.monolith.commons.models.orders.*;
 import com.revify.monolith.config.messaging.RabbitMqEndpointsConfiguration;
 import com.revify.monolith.finance.messaging.DelayProducer;
+import com.revify.monolith.finance.model.addons.PaymentExecutionStatus;
+import com.revify.monolith.finance.model.jpa.PaymentSystemAccount;
+import com.revify.monolith.finance.model.jpa.payment.Payment;
 import com.revify.monolith.finance.service.OrderPaymentService;
 import com.revify.monolith.notifications.connector.producers.FanoutNotificationProducer;
 import com.revify.monolith.orders.models.Delay;
@@ -39,7 +39,9 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import static com.revify.monolith.orders.models.utils.OrderUtils.findShipmentParticle;
 
@@ -69,8 +71,35 @@ public class OrderService {
         };
         Map<String, String> stringStringMap = gson.fromJson(messagePayload, type);
         if (stringStringMap != null && stringStringMap.containsKey("orderId")) {
-            //check all payments for order
-            //if some is missing - remove and start order
+            Order order = findOrderById(stringStringMap.get("orderId"));
+            if(order != null) {
+                List<Payment> payments = orderPaymentService.findForOrder(order.getId().toHexString());
+                for(Payment payment : payments) {
+                    PaymentSystemAccount account = payment.getAccount();
+                    if(!payment.getExecutedSuccessfully() || !payment.getExecutionStatus().equals(PaymentExecutionStatus.EXECUTED)) {
+                        order.setItems(order.getItems().stream().filter(e -> payment.getItems().contains(e)).collect(Collectors.toSet()));
+                        order.setReceivers(order.getReceivers().stream().filter(e -> Objects.equals(account.getSystemUserId(), e)).collect(Collectors.toSet()));
+                    }
+                }
+
+                order.setIsPaid(true);
+                order.setDeliveryTimeEnd(Instant.now().plus(7,ChronoUnit.DAYS).toEpochMilli());
+                order.setStatus(OrderShipmentStatus.PREPARING);
+                order.setAdditionalStatus(OrderAdditionalStatus.PAYMENTS_RECEIVED);
+                mongoTemplate.save(order);
+                delayProducer.sendOrderDeliveryTracker(order.getId().toHexString(), order.getDeliveryTimeEnd() - Instant.now().toEpochMilli());
+            }
+        }
+    }
+
+    @RabbitListener(queues = RabbitMqEndpointsConfiguration.ORDER_SUMMARY)
+    public void handleOrderDeliveryTracker(String messagePayload, Message message) {
+        log.info("UNIMPLEMENTED MESSAGE");
+        TypeToken<Map<String, String>> type = new TypeToken<>() {
+        };
+        Map<String, String> stringStringMap = gson.fromJson(messagePayload, type);
+        if (stringStringMap != null && stringStringMap.containsKey("orderId")) {
+
         }
     }
 
@@ -92,9 +121,8 @@ public class OrderService {
         }
         {
             delayProducer.sendOrderSummarization(order.getId().toHexString(), orderDto.paymentsCutoff() == null ?
-                    Instant.now().plus(3, ChronoUnit.DAYS).toEpochMilli() - Instant.now().toEpochMilli() : orderDto.paymentsCutoff());
+                    3 * 1000 * 60 * 60 * 24 : orderDto.paymentsCutoff());
         }
-
         saveShipmentParticles(order);
         orderPaymentService.processPayment(order);
 
@@ -206,7 +234,7 @@ public class OrderService {
                 }
             });
             Order save = mongoTemplate.save(existingOrder);
-            updateOrderStatus(existingOrder.getId(), OrderShipmentStatus.AWAITING);
+//            updateOrderStatus(existingOrder.getId(), OrderShipmentStatus.AWAITING);
 
             return save;
         }

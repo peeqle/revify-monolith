@@ -17,4 +17,6 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
             " AND p.account.isActive = true" +
             " AND (p.executionStatus = 'WAITING' OR p.executionStatus = 'FAILED')")
     List<Payment> findByAccountId(@Param("userId") Long userId, Pageable pageable);
+
+    List<Payment> findByOrderId(@Param("orderId") String orderId);
 }

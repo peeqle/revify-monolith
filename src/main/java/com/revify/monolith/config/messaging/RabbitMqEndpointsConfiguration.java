@@ -18,8 +18,9 @@ public class RabbitMqEndpointsConfiguration {
     public static final String DELAYED_EXCHANGE_NAME = "delayed-payment-exchange";
     public static final String PAYMENT_EXPIRATION = "payment-expiration-queue";
     public static final String ORDER_SUMMARY = "order-summary-queue";
+    public static final String ORDER_DELIVERY = "order-delivery-queue";
     public static final String PAYMENT_ROUTING_KEY = "payment.expire";
-    public static final String ORDERS_ROUTING_KEY = "payment.expire";
+    public static final String ORDERS_ROUTING_KEY = "order.expire";
 
 
     @Bean

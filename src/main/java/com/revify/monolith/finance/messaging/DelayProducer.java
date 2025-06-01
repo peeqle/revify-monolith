@@ -42,4 +42,19 @@ public class DelayProducer {
         );
         log.debug("Sent delayed message for orderId " + orderId + " with delay " + delayInMilliseconds + "ms");
     }
+
+    public void sendOrderDeliveryTracker(String orderId, long delayInMilliseconds) {
+        String messagePayload = "{\"orderId\": " + orderId + "}";
+
+        rabbitTemplate.convertAndSend(
+                RabbitMqEndpointsConfiguration.DELAYED_EXCHANGE_NAME,
+                RabbitMqEndpointsConfiguration.ORDER_DELIVERY,
+                messagePayload,
+                message -> {
+                    message.getMessageProperties().setDelayLong(delayInMilliseconds);
+                    return message;
+                }
+        );
+        log.debug("Sent delayed message for orderId " + orderId + " with delay " + delayInMilliseconds + "ms");
+    }
 }

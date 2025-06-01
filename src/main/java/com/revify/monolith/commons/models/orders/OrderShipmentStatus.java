@@ -5,9 +5,9 @@ import lombok.Getter;
 @Getter
 public enum OrderShipmentStatus {
     CREATED,
+    PREPARING,
     BOUGHT,
     PACKED,
-    AWAITING,
     ON_THE_WAY,
     TRANSPORTED,
     RECEIVED;
