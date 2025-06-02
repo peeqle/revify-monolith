@@ -497,7 +497,8 @@ public class ShopDataInitializer {
                     .countries(Arrays.stream(new String[]{
                             "DE", "AT", "CH", "HU", "HR", "SI", "ES"
                     }).map(CountryCode::getCountryCode).collect(Collectors.toSet()))
-                    .categories(new HashSet<>(Arrays.asList(Category.HEALTH_AND_BEAUTY, Category.HOME_AND_LIVING, Category.BABY_AND_KIDS, Category.OFFICE_SUPPLIES, Category.TOYS_AND_GAMES, Category.PET_SUPPLIES, Category.HOBBIES_AND_CRAFTS)))
+                    .categories(new HashSet<>(Arrays.asList(Category.HEALTH_AND_BEAUTY, Category.HOME_AND_LIVING, Category.BABY_AND_KIDS, Category.OFFICE_SUPPLIES,
+                            Category.PET_SUPPLIES, Category.HOBBIES_AND_CRAFTS)))
                     .build();
             shopRepository.save(shop);
         }

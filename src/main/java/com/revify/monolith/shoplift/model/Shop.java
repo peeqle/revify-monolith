@@ -35,6 +35,8 @@ public class Shop {
     @ElementCollection
     private Set<Category> categories;
 
+    private Double relevance = 1.0;
+
     private Long lastMonthDeliveries = 0L;
     private Long currentMonthDeliveries = 0L;
 
