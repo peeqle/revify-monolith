@@ -24,6 +24,9 @@ import java.util.Set;
 public class Shoplift {
     @Id
     private ObjectId id;
+    private String title;
+    private String description;
+
     private List<String> shopIds;
 
     private Long courierId;
@@ -54,12 +57,13 @@ public class Shoplift {
     public static Shoplift from(Create_Shoplift createShoplift) {
         return Shoplift.builder()
                 .shopIds(createShoplift.getShopIds())
-                .minEntryDeliveryPrice(Price.builder()
-                        .withCurrency(Currency.from(createShoplift.getCurrency()))
-                        .withAmount(createShoplift.getMinEntryDeliveryPrice())
-                        .build())
+                .title(createShoplift.getTitle())
+                .description(createShoplift.getDescription())
+                .minEntryDeliveryPrice(createShoplift.getMinEntryDeliveryPrice())
                 .entries(createShoplift.getMaxEntries())
                 .deliveryCutoffTime(createShoplift.getDeliveryCutoffTime())
+                .isRecurrent(createShoplift.getIsRecurrent())
+                .allowedSystemAppend(createShoplift.getAllowedSystemAppend())
                 .build();
     }
 }

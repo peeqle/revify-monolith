@@ -1,5 +1,6 @@
 package com.revify.monolith.shoplift.model.req;
 
+import com.revify.monolith.commons.finance.Price;
 import com.revify.monolith.geo.model.shared.Destination;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -11,13 +12,17 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Create_Shoplift {
+    private String title;
+    private String description;
+
     private List<String> shopIds;
 
     private Destination destination;
-
-    private String currency;
-    private Double minEntryDeliveryPrice;
+    private Price minEntryDeliveryPrice;
     private Integer maxEntries;
 
     private Long deliveryCutoffTime;
+
+    private Boolean isRecurrent;
+    private Boolean allowedSystemAppend;
 }

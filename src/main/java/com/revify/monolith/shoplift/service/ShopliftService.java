@@ -1,6 +1,7 @@
 package com.revify.monolith.shoplift.service;
 
 import com.mongodb.client.result.UpdateResult;
+import com.revify.monolith.commons.auth.sync.UserUtils;
 import com.revify.monolith.commons.finance.Currency;
 import com.revify.monolith.commons.finance.Price;
 import com.revify.monolith.commons.items.Category;
@@ -155,12 +156,16 @@ public class ShopliftService {
         if (readUserService.isClient()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You cannot create a new shoplift");
         }
-        shoplift.getShopIds().removeIf(e -> !shopExists(e));
+        shoplift.getShopIds().removeIf(this::shopExists);
 
         GeoLocation destination = geolocationService.resolveLocation(shoplift.getDestination());
 
         Shoplift newShoplift = Shoplift.from(shoplift);
+        newShoplift.setCourierId(UserUtils.getUserId());
         newShoplift.setDestination(destination);
+        newShoplift.setCreatedAt(Instant.now().toEpochMilli());
+        newShoplift.setUpdatedAt(Instant.now().toEpochMilli());
+        newShoplift.setIsRecurrent(false);
         return mongoTemplate.save(newShoplift);
     }
 
