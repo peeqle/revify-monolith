@@ -14,6 +14,7 @@ import com.revify.monolith.shoplift.model.Shop;
 import com.revify.monolith.shoplift.model.Shoplift;
 import com.revify.monolith.shoplift.model.req.Accept_Shoplift;
 import com.revify.monolith.shoplift.model.req.Create_Shoplift;
+import com.revify.monolith.user.service.ReadUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
@@ -51,6 +52,8 @@ public class ShopliftService {
     private final CurrencyService currencyService;
 
     private final KafkaTemplate<String, String> kafkaTemplate;
+
+    private final ReadUserService readUserService;
 
     @KafkaListener(topics = ITEM_ADD_SHOPLIFT)
     public void addItem(@Payload String itemId) {
@@ -149,10 +152,10 @@ public class ShopliftService {
     }
 
     public Shoplift createNew(Create_Shoplift shoplift) {
-        Shop shop = findShop(shoplift.getShopId());
-        if (shop == null) {
-            throw new RuntimeException("Shop not found");
+        if (readUserService.isClient()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You cannot create a new shoplift");
         }
+        shoplift.getShopIds().removeIf(e -> !shopExists(e));
 
         GeoLocation destination = geolocationService.resolveLocation(shoplift.getDestination());
 
@@ -163,5 +166,9 @@ public class ShopliftService {
 
     public Shop findShop(String shopId) {
         return mongoTemplate.findOne(Query.query(Criteria.where("_id").is(shopId)), Shop.class);
+    }
+
+    public Boolean shopExists(String shopId) {
+        return mongoTemplate.exists(Query.query(Criteria.where("_id").is(shopId)), Shop.class);
     }
 }

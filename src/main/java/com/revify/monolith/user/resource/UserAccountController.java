@@ -17,6 +17,7 @@ import com.revify.monolith.user.service.ValidationException;
 import com.revify.monolith.user.service.WriteUserService;
 import com.revify.monolith.user.service.phone_messaging.PhoneInteractionService;
 import com.revify.monolith.user.service.util.RequestValidator;
+import com.vonage.client.verify.CheckRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +43,11 @@ public class UserAccountController {
     private final KafkaIntegrationService kafkaIntegrationService;
 
     private final PhoneInteractionService phoneInteractionService;
+
+    @PostMapping("/check")
+    public ResponseEntity<List<ValidationContext>> check(@RequestBody RegisterRequest validationRequest) {
+        return ResponseEntity.ok(writeUserService.validate(validationRequest));
+    }
 
     @PostMapping("/create")
     public ResponseEntity<?> createUserAccount(@RequestBody RegisterRequest registerRequest, HttpServletRequest request) {

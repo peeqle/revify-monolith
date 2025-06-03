@@ -1,5 +1,6 @@
 package com.revify.monolith.shoplift.repo;
 
+import com.revify.monolith.commons.geolocation.CountryCode;
 import com.revify.monolith.shoplift.model.Shop;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,6 +14,8 @@ import java.util.UUID;
 public interface ShopRepository extends JpaRepository<Shop, UUID> {
     Boolean existsByName(String name);
 
-    @Query("SELECT Shop FROM Shop p WHERE lower(p.name) LIKE lower(concat('%',:name,'%')) ORDER BY p.relevance")
+    @Query("SELECT p FROM Shop p WHERE " +
+            "lower(p.name) LIKE lower(concat('%',:name,'%')) " +
+            "ORDER BY p.relevance")
     List<Shop> search(String name, Pageable pageable);
 }

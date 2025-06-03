@@ -13,6 +13,7 @@ import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.List;
 import java.util.Set;
 
 @Data
@@ -23,7 +24,7 @@ import java.util.Set;
 public class Shoplift {
     @Id
     private ObjectId id;
-    private String shopId;
+    private List<String> shopIds;
 
     private Long courierId;
     private Set<Long> additionalCourierIds;
@@ -37,6 +38,8 @@ public class Shoplift {
 
     private Price minEntryDeliveryPrice;
     private Price EURminEntryDeliveryPrice;
+
+    private Price maxEntryPrice;
     private Integer entries;
 
     private Long deliveryCutoffTime;
@@ -50,7 +53,7 @@ public class Shoplift {
 
     public static Shoplift from(Create_Shoplift createShoplift) {
         return Shoplift.builder()
-                .shopId(createShoplift.getShopId())
+                .shopIds(createShoplift.getShopIds())
                 .minEntryDeliveryPrice(Price.builder()
                         .withCurrency(Currency.from(createShoplift.getCurrency()))
                         .withAmount(createShoplift.getMinEntryDeliveryPrice())

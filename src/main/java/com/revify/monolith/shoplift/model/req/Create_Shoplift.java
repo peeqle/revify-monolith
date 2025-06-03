@@ -5,11 +5,13 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class Create_Shoplift {
-    private String shopId;
+    private List<String> shopIds;
 
     private Destination destination;
 

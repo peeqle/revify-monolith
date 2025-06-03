@@ -29,10 +29,12 @@ public class Shop {
     @Column(unique = true)
     private String URL;
 
-    @ElementCollection
+    @ElementCollection(targetClass = CountryCode.class)
+    @Enumerated(EnumType.STRING)
     private Set<CountryCode> countries;
 
-    @ElementCollection
+    @ElementCollection(targetClass = Category.class)
+    @Enumerated(EnumType.STRING)
     private Set<Category> categories;
 
     private Double relevance = 1.0;

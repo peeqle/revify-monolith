@@ -60,6 +60,7 @@ public class WriteUserService extends CrudService<AppUser> {
 
     private final Gson gson = new GsonBuilder().create();
 
+
     @Async
     @Scheduled(cron = "0 0 * * * *")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -69,6 +70,10 @@ public class WriteUserService extends CrudService<AppUser> {
                 taskDelete(actionServiceTask);
             }
         }
+    }
+
+    public List<ValidationContext> validate(RegisterRequest validateRegisterRequest) {
+        return userValidator.validateRequest(validateRegisterRequest);
     }
 
     @Transactional
