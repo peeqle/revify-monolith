@@ -60,7 +60,7 @@ public class GeolocationService {
             Place place = nominatimService.readGeolocationAddress(latitude, longitude);
             if (place != null) {
                 GeoLocation geoLocation = mapGeolocation(place);
-                geoLocation.setLocation(new GeoJsonPoint(latitude, longitude));
+                geoLocation.setLocation(new GeoJsonPoint(longitude, latitude));
 
                 forCoordinates = mongoTemplate.save(StoredGeoLocation.with(geoLocation));
             } else {
@@ -96,7 +96,7 @@ public class GeolocationService {
     }
 
     public StoredGeoLocation findForCoordinates(Double lat, Double lon) {
-        Query query = Query.query(Criteria.where("geoLocation.location").near(new GeoJsonPoint(lat, lon)).maxDistance(100.0));
+        Query query = Query.query(Criteria.where("geoLocation.location").near(new GeoJsonPoint(lon, lat)).maxDistance(100.0));
         return mongoTemplate.findOne(query, StoredGeoLocation.class);
     }
 

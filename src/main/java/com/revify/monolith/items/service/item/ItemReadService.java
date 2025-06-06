@@ -63,6 +63,7 @@ public class ItemReadService {
     public List<Item> findForUser(Integer offset, Integer limit) {
         Query query = new Query()
                 .addCriteria(Criteria.where("creatorId").ne(UserUtils.getUserId()))
+                .addCriteria(Criteria.where("shopliftId").not())
                 .skip((long) offset * limit)
                 .limit(limit);
 

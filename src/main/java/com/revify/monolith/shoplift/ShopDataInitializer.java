@@ -38,6 +38,17 @@ public class ShopDataInitializer {
                     .build();
             shopRepository.save(shop);
         }
+        if (!shopRepository.existsByName("MediaExpert")) {
+            Shop shop = Shop.builder()
+                    .name("MediaExpert")
+                    .URL("https://www.mediaexpert.pl/")
+                    .countries(Arrays.stream(new String[]{
+                            "PL"
+                    }).map(CountryCode::getCountryCode).collect(Collectors.toSet()))
+                    .categories(new HashSet<>(Arrays.asList(Category.ELECTRONICS)))
+                    .build();
+            shopRepository.save(shop);
+        }
         if (!shopRepository.existsByName("Apple")) {
             Shop shop = Shop.builder()
                     .name("Apple")

@@ -51,11 +51,11 @@ public class PathService {
 
     public List<PathSegment> findPathsFromPoint(Destination nearEnd, Destination start, Integer limit, Integer offset) {
         Query query = Query.query(
-                Criteria.where("particle.from.location").near(new GeoJsonPoint(start.getLat(), start.getLon())).maxDistance(1000.0)
+                Criteria.where("particle.from.location").near(new GeoJsonPoint(start.getLon(), start.getLat())).maxDistance(1000.0)
                         .and("courierId").ne(UserUtils.getUserId())
         );
         if (nearEnd != null) {
-            query.addCriteria(Criteria.where("particle.to.location").near(new GeoJsonPoint(nearEnd.getLat(), nearEnd.getLon())).maxDistance(10000.0));
+            query.addCriteria(Criteria.where("particle.to.location").near(new GeoJsonPoint(nearEnd.getLon(), nearEnd.getLat())).maxDistance(10000.0));
         }
         query.with(Sort.by(Sort.Direction.ASC, "validUntil"));
         query.skip((long) offset * limit).limit(limit);

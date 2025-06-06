@@ -16,6 +16,7 @@ public class Create_Shoplift {
     private String description;
 
     private List<String> shopIds;
+    private List<String> presentCategories;
 
     private Destination destination;
     private Price minEntryDeliveryPrice;

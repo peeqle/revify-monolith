@@ -7,6 +7,7 @@ import com.revify.monolith.commons.items.ItemDescriptionDTO;
 import com.revify.monolith.geo.model.GeoLocation;
 import com.revify.monolith.items.model.item.Item;
 import com.revify.monolith.items.model.item.ItemDescription;
+import com.revify.monolith.shoplift.model.Shoplift;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 
 import java.time.Instant;
@@ -34,9 +35,12 @@ public class ItemUtils {
                         .withAmount(item.getPrice().getAmount())
                         .withCurrency(item.getPrice().getCurrency()).build(),
                 item.getCreatedAt(),
+                item.getItemDescription().getShopReference(),
+                item.getItemDescription().getUrl(),
                 item.getUpdatedAt(),
                 item.getValidUntil(),
-                item.isActive()
+                item.isActive(),
+                item.getShopliftId()
         );
     }
 
@@ -54,7 +58,7 @@ public class ItemUtils {
 //        destination.setCountryCode(itemDestination.getCountryCode());
 //        destination.setPlaceName(itemDestination.getPlaceName());
         destination.setDisplayName(itemDestination.getAddress());
-        destination.setLocation(new GeoJsonPoint(itemDestination.getLatitude(), itemDestination.getLongitude()));
+        destination.setLocation(new GeoJsonPoint(itemDestination.getLongitude(), itemDestination.getLatitude()));
 
         item.setActive(true);
         item.setItemDescription(
@@ -69,6 +73,35 @@ public class ItemUtils {
                         .compositeStackingEnabled(itemCreation.description().getCompositeStackingEnabled())
 
                         .destination(destination)
+                        .maximumRequiredBidPrice(itemCreation.description().getMaximumRequiredBidPrice())
+                        .build()
+        );
+
+        return item;
+    }
+
+    public static Item from(ItemCreationDTO itemCreation, Shoplift shoplift) {
+        Item item = new Item();
+
+        item.setCreatedAt(Instant.now().toEpochMilli());
+        item.setUpdatedAt(Instant.now().toEpochMilli());
+
+        item.setValidUntil(itemCreation.validUntil());
+        item.setPrice(itemCreation.price());
+
+        item.setActive(true);
+        item.setItemDescription(
+                ItemDescription.builder()
+                        .description(itemCreation.description().getDescription())
+                        .title(itemCreation.description().getTitle())
+
+                        .url(itemCreation.description().getUrl())
+                        .categories(itemCreation.description().getCategories())
+                        .shopReference(itemCreation.description().getShopReference())
+
+                        .compositeStackingEnabled(itemCreation.description().getCompositeStackingEnabled())
+
+                        .destination(shoplift.getDestination())
                         .maximumRequiredBidPrice(itemCreation.description().getMaximumRequiredBidPrice())
                         .build()
         );

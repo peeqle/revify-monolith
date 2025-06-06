@@ -24,9 +24,6 @@ public class ItemChangesComparator {
         result = compareNullableStrings(o1.getDescription(), o2.getDescription());
         if (result != 0) return result;
 
-        result = compareNullableStrings(o1.getShopReference(), o2.getShopReference());
-        if (result != 0) return result;
-
         result = compareNullableStrings(o1.getUrl(), o2.getUrl());
         if (result != 0) return result;
 
@@ -67,7 +64,7 @@ public class ItemChangesComparator {
         }
         if (dto.getDestination() != null) {
             GeoLocation destination = initial.getDestination();
-            destination.setLocation(new GeoJsonPoint(dto.getDestination().getLatitude(), dto.getDestination().getLongitude()));
+            destination.setLocation(new GeoJsonPoint(dto.getDestination().getLongitude(), dto.getDestination().getLatitude()));
 
             initial.setDestination(destination);
         }
@@ -87,9 +84,6 @@ public class ItemChangesComparator {
         if (result != 0) return result;
 
         result = compareNullableStrings(o1.getDescription(), o2.getDescription());
-        if (result != 0) return result;
-
-        result = compareNullableStrings(o1.getShopReference(), o2.getShopReference());
         if (result != 0) return result;
 
         result = compareNullableStrings(o1.getUrl(), o2.getUrl());

@@ -1,5 +1,6 @@
 package com.revify.monolith.notifications.models;
 
+import com.revify.monolith.commons.auth.sync.UserUtils;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -45,13 +46,13 @@ public class Notification {
 
     public record NotificationDTO(String id, String title, String body, String relatedItemId,
                                   String relatedCompositeItemId, Long relatedUserId, NotificationType type,
-                                  Long createdAt) {
+                                  Long createdAt, Boolean isRead) {
 
         public static NotificationDTO from(Notification notification) {
             return new NotificationDTO(notification.getId().toHexString(), notification.getTitle(),
                     notification.getBody(), notification.getRelatedItemId(),
                     notification.getRelatedCompositeItemId(), notification.getRelatedUserId(), notification.getType(),
-                    notification.getCreatedAt());
+                    notification.getCreatedAt(), notification.getReadByUserIdsWithTimestamps().containsKey(UserUtils.getUserId()));
         }
     }
 }

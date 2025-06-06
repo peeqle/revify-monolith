@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 import java.util.Set;
 
 @Data
@@ -18,7 +19,7 @@ public class ItemDescriptionDTO {
     private String description;
 
     private Set<Category> categories;
-    private String shopReference;
+    private List<String> shopReference;
     private String url;
 
     private Price maximumRequiredBidPrice;

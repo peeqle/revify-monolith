@@ -1,7 +1,6 @@
 package com.revify.monolith.commons.items;
 
 
-import com.revify.monolith.commons.finance.Price;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,7 +11,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ItemShopliftDTO {
+    private String shopliftId;
     private Boolean addToShoplift;
-    private Price maxDeliveryPerEntity;
-    private Long maxDeliveryDate;
 }
