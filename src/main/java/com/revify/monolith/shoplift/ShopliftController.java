@@ -57,6 +57,11 @@ public class ShopliftController {
         shopliftService.acceptShoplifting(acceptShoplift);
     }
 
+    @PostMapping("/disable")
+    public void disableShoplift(@RequestParam String shopliftId) {
+        shopliftService.disable(shopliftId);
+    }
+
     //courier request to join room for items
 
     //block and delete items from user

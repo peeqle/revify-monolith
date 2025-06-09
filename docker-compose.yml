@@ -26,7 +26,6 @@ services:
       - "6379:6379"
     volumes:
       - redis-data:/data
-    command: [ "redis-server", "--appendonly", "yes" ]
   rabbitmq:
     #    v4.1.0
     image: rabbitmq-delayed-messaging

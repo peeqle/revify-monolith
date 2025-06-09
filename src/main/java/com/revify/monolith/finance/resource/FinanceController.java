@@ -11,10 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
@@ -55,6 +52,11 @@ public class FinanceController {
     @GetMapping("/order/payments")
     public ResponseEntity<List<PaymentDTO>> getUserActivePayments(@RequestParam Integer offset, @RequestParam Integer limit) {
         return ResponseEntity.ok(orderPaymentService.getUserPayments(offset, limit).stream().map(PaymentDTO::from).toList());
+    }
+
+    @GetMapping("/order/payment")
+    public ResponseEntity<List<PaymentDTO>> fetchOrderPayment(@RequestParam String orderId) {
+        return ResponseEntity.ok(orderPaymentService.processPayment(orderId).stream().map(PaymentDTO::from).toList());
     }
 
 

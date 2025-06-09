@@ -19,7 +19,7 @@ public record OrderDTO(
 ) {
     public static OrderDTO from(Order order) {
         return new OrderDTO(order.getId().toHexString(), order.getReceivers(), order.getItems(), order.getStatus(),
-                order.getAdditionalStatus(), order.getDeliveryTimeEnd(), order.getShipmentParticle(), order.getIsSuspended(),
-                order.getIsPaid(), order.getIsShoplift());
+                order.getAdditionalStatus(), order.getDeliveryTimeEnd(), order.getShipmentParticle(), order.isSuspended(),
+                order.isPaid(), order.isShoplift());
     }
 }

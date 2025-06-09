@@ -73,6 +73,7 @@ public class RecipientService {
                                 if (card != null) {
                                     paymentMethods.computeIfAbsent(PaymentProcessor.STRIPE.getServiceName(), k -> new ArrayList<>()).add(
                                             PaymentMethodDTO.builder()
+                                                    .id(method.getId())
                                                     .last4(card.getLast4())
                                                     .cardCountry(card.getCountry())
                                                     .displayBrand(card.getDisplayBrand())

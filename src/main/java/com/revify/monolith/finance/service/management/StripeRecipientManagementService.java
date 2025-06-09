@@ -94,7 +94,6 @@ public class StripeRecipientManagementService implements RecipientProcessor<Cust
                         .setCustomer(account.getAccountId())
                         .addPaymentMethodType("card")
                         .addPaymentMethodType("link")
-                        .setApplicationFeeAmount(200L)
                         .build();
         return PaymentIntent.create(params);
     }

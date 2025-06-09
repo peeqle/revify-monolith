@@ -55,7 +55,6 @@ public class SearchService {
         res.addAll(mongoTemplate.find(shopliftQuery.limit(3), Shoplift.class).stream().map(Shoplift::getId).toList());
         res.addAll(mongoTemplate.find(itemQuery.limit(3), Item.class).stream().map(Item::getId).toList());
 
-
         return res;
     }
 }

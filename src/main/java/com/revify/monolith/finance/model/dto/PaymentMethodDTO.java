@@ -16,4 +16,5 @@ public class PaymentMethodDTO {
     private Long expYear;
     private String last4;
     private Boolean cvcCorrect;
+    private String id;
 }

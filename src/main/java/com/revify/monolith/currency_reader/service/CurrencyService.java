@@ -19,7 +19,7 @@ public class CurrencyService {
 
     private static final String BASE_FIAT = "EUR";
 
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final RedisTemplate<String, String> redisTemplate;
 
     private final ThreadLocal<Gson> gsonThreadLocal = ThreadLocal.withInitial(() -> new GsonBuilder().create());
 

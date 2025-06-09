@@ -55,9 +55,9 @@ public class Order {
     private Long createdAt;
     private Long updatedAt;
 
-    private Boolean isSuspended = false;
-    private Boolean isPaid = false;
-    private Boolean isShoplift = false;
+    private boolean isSuspended = false;
+    private boolean isPaid = false;
+    private boolean isShoplift = false;
 
     public void addShipmentParticle(OrderShipmentParticle particle) {
         if (particle != null) {

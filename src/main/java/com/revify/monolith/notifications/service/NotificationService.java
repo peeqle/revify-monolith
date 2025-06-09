@@ -2,9 +2,7 @@ package com.revify.monolith.notifications.service;
 
 import com.revify.monolith.commons.auth.sync.UserUtils;
 import com.revify.monolith.notifications.models.Notification;
-import com.vonage.client.meetings.UISettings;
 import lombok.RequiredArgsConstructor;
-import org.bson.types.ObjectId;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -14,7 +12,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -37,8 +34,9 @@ public class NotificationService {
 
     public List<Notification> fetchUserNotifications() {
         Query query = Query.query(
-                Criteria.where("relatedUsers").in(UserUtils.getUserId())
-        ).with(Sort.by(Sort.Direction.DESC, "createdAt"));
+                        Criteria.where("relatedUsers").in(UserUtils.getUserId())
+                )
+                .with(Sort.by(Sort.Direction.DESC, "createdAt"));
 
         return mongoTemplate.find(query, Notification.class);
     }
@@ -55,9 +53,9 @@ public class NotificationService {
                 relatedUsers.removeIf(x -> x == currentUserId);
             }
 
-            if ( relatedUsers == null || relatedUsers.isEmpty()) {
+            if (relatedUsers == null || relatedUsers.isEmpty()) {
                 mongoTemplate.remove(notification);
-            }else {
+            } else {
                 notification.setRelatedUsers(relatedUsers);
                 mongoTemplate.save(notification);
             }

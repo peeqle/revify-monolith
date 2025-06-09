@@ -36,6 +36,7 @@ public class Payment implements Serializable {
     private Price price;
 
     private String paymentIntentId;
+    private String paymentIntentClientSecret;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "recipient_id", nullable = false)

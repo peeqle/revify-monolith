@@ -210,4 +210,15 @@ public class ShopliftService {
     public Boolean shopExists(String shopId) {
         return mongoTemplate.exists(Query.query(Criteria.where("_id").is(shopId)), Shop.class);
     }
+
+    public void disable(String shopliftId) {
+        Shoplift byId = getById(shopliftId);
+        if (byId == null || byId.getCourierId() != UserUtils.getUserId()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot modify shoplift");
+        }
+
+        byId.setIsActive(false);
+        byId.setUpdatedAt(Instant.now().toEpochMilli());
+        mongoTemplate.save(byId);
+    }
 }

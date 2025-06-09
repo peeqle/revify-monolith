@@ -53,6 +53,7 @@ public class Shoplift {
     private Price cumulativePrice;
 
     private Boolean isRecurrent;
+    private Boolean isActive;
     private Boolean allowedSystemAppend;
 
     public static Shoplift from(Create_Shoplift createShoplift) {

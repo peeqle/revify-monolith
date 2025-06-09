@@ -82,7 +82,7 @@ public class OrderService {
                     }
                 }
 
-                order.setIsPaid(true);
+                order.setPaid(true);
                 order.setDeliveryTimeEnd(Instant.now().plus(7,ChronoUnit.DAYS).toEpochMilli());
                 order.setStatus(OrderShipmentStatus.PREPARING);
                 order.setAdditionalStatus(OrderAdditionalStatus.PAYMENTS_RECEIVED);
@@ -124,7 +124,7 @@ public class OrderService {
                     3 * 1000 * 60 * 60 * 24 : orderDto.paymentsCutoff());
         }
         saveShipmentParticles(order);
-        orderPaymentService.processPayment(order);
+        orderPaymentService.processPayment(order, false);
 
         return order;
     }
@@ -144,7 +144,7 @@ public class OrderService {
             pathSegment.setIsAcceptedByCustomer(true);
             pathSegment.setIsCompleted(false);
             pathSegment.setIsArchived(false);
-            pathSegment.setIsShoplift(order.getIsShoplift());
+            pathSegment.setIsShoplift(order.isShoplift());
 
             mongoTemplate.save(pathSegment);
             head = head.getNext();
@@ -152,15 +152,13 @@ public class OrderService {
     }
 
     public List<Order> getUserOrders(Integer offset, Integer limit) {
-        Criteria criteria = new Criteria().andOperator(
-                Criteria.where("isSuspended").is(false),
-                new Criteria().orOperator(
-                        Criteria.where("receiverId").is(UserUtils.getUserId()),
-                        Criteria.where("couriersInvolved").in(UserUtils.getUserId())
-                )
-        );
+        Criteria criteria = Criteria.where("isSuspended").is(false);
 
         return mongoTemplate.find(Query.query(criteria)
+                .addCriteria(new Criteria().orOperator(
+                        Criteria.where("receivers").in(UserUtils.getUserId()),
+                        Criteria.where("couriersInvolved").in(UserUtils.getUserId())
+                ))
                 .with(Sort.by(Sort.Direction.ASC, "deliveryTimeEnd"))
                 .skip((long) offset * limit).limit(limit), Order.class);
     }
@@ -201,7 +199,7 @@ public class OrderService {
         Order existingOrder = findOrderById(orderId);
         Tuple2<Integer, OrderShipmentParticle> shipmentParticle = findShipmentParticle(UserUtils.getUserId(), existingOrder.getShipmentParticle());
 
-        if (shipmentParticle != null && !existingOrder.getIsShoplift()) {
+        if (shipmentParticle != null && !existingOrder.isShoplift()) {
             shipmentParticle = existingOrder.removeShipmentParticle(UserUtils.getUserId());
             OrderShipmentParticle particle = shipmentParticle._2;
 
