@@ -6,7 +6,7 @@ import com.revify.monolith.commons.finance.Price;
 import com.revify.monolith.commons.messaging.dto.finance.RecipientCreation;
 import com.revify.monolith.currency_reader.service.CurrencyService;
 import com.revify.monolith.finance.RecipientProcessor;
-import com.revify.monolith.finance.config.properties.PaymentProcessingProperties;
+import com.revify.monolith.finance.config.PaymentProcessingProperties;
 import com.revify.monolith.finance.model.exc.PaymentServiceInitializationException;
 import com.revify.monolith.finance.model.jpa.PaymentSystemAccount;
 import com.revify.monolith.finance.model.jpa.payment.Payment;
@@ -20,7 +20,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.Locale;
 import java.util.Map;
 
@@ -98,17 +97,6 @@ public class StripeRecipientManagementService implements RecipientProcessor<Cust
         return PaymentIntent.create(params);
     }
 
-    @PostConstruct
-    public void init() throws PaymentServiceInitializationException {
-        PaymentProcessingProperties.Credentials stripe = paymentProcessingProperties.getCredentials()
-                .stripe();
-        if (stripe != null) {
-            Stripe.apiKey = stripe.sec();
-            return;
-        }
-        throw new PaymentServiceInitializationException("Cannot configure Stripe credentials from configuration, stripe is null");
-    }
-
     @Override
     public Customer registerCustomer(RecipientCreation recipientCreation) {
 
@@ -142,40 +130,15 @@ public class StripeRecipientManagementService implements RecipientProcessor<Cust
     @Override
     public Account registerCourier(RecipientCreation recipientCreation) {
         AccountCreateParams accountCreateParams = AccountCreateParams.builder()
-                .setType(AccountCreateParams.Type.CUSTOM)
+                .setType(AccountCreateParams.Type.EXPRESS)
                 .setEmail(recipientCreation.getEmail())
                 .setCountry(recipientCreation.getCountryCode())
-                .setBusinessType(AccountCreateParams.BusinessType.INDIVIDUAL)
-                .setIndividual(AccountCreateParams.Individual.builder()
-                        .setPhone(recipientCreation.getPhone())
-                        .setFirstName(recipientCreation.getFirstName())
-                        .setLastName(recipientCreation.getLastName())
-                        .setDob(AccountCreateParams.Individual.Dob.builder()
-                                .setDay(recipientCreation.getDobDay())
-                                .setMonth(recipientCreation.getDobMonth())
-                                .setYear(recipientCreation.getDobYear())
-                                .build())
-                        .setAddress(AccountCreateParams.Individual.Address.builder()
-                                .setCountry(recipientCreation.getCountryCode())
-                                .setState(recipientCreation.getRegion())
-                                .setCity(recipientCreation.getCity())
-                                .setCountry(recipientCreation.getCountryCode())
-                                .setPostalCode(recipientCreation.getPostalCode())
-                                .build())
-                        .build())
                 .setCapabilities(AccountCreateParams.Capabilities.builder()
                         .setTransfers(AccountCreateParams.Capabilities.Transfers.builder()
                                 .setRequested(true)
                                 .build())
                         .build())
-                .setTosAcceptance(AccountCreateParams.TosAcceptance.builder()
-                        .setIp(recipientCreation.getIp())
-                        .setDate(Instant.now().getEpochSecond())
-                        .setUserAgent(recipientCreation.getBrowserAccess())
-                        .setServiceAgreement("recipient")
-                        .build())
                 .build();
-
 
         try {
             return Account.create(accountCreateParams);

@@ -172,6 +172,14 @@ public class RecipientService {
             throw new UnsupportedOperationException(recipientCreation.getCountryCode() + " is not supported");
         }
 
+        if (!recipientCreation.getUserRole().equals(UserRole.CLIENT)) {
+            Object registeredCourier = recipientProcessor.registerCourier(recipientCreation);
+
+            if (registeredCourier instanceof Account account) {
+
+            }
+        }
+
         Object registeredCustomer = recipientProcessor.registerCustomer(recipientCreation);
 
         if (registeredCustomer instanceof Customer account) {
@@ -201,14 +209,6 @@ public class RecipientService {
             stripePaymentSystemAccount.setCreatedAt(account.getCreated());
 
             stripePaymentSystemRepository.save(stripePaymentSystemAccount);
-        }
-
-        if (!recipientCreation.getUserRole().equals(UserRole.CLIENT)) {
-            Object registeredCourier = recipientProcessor.registerCourier(recipientCreation);
-
-            if (registeredCourier instanceof Account account) {
-
-            }
         }
     }
 }

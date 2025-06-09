@@ -1,4 +1,4 @@
-package com.revify.monolith.finance.config.properties;
+package com.revify.monolith.finance.config;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

@@ -2,7 +2,6 @@ package com.revify.monolith.finance.config;
 
 import com.revify.monolith.commons.finance.PaymentProcessor;
 import com.revify.monolith.finance.PaymentService;
-import com.revify.monolith.finance.config.properties.PaymentProcessingProperties;
 import com.revify.monolith.finance.service.payment.BePaidPaymentServiceService;
 import com.revify.monolith.finance.service.payment.StripePaymentServiceService;
 import lombok.RequiredArgsConstructor;

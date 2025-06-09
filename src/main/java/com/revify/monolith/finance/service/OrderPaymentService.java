@@ -1,14 +1,15 @@
 package com.revify.monolith.finance.service;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.revify.monolith.commons.auth.sync.UserUtils;
 import com.revify.monolith.commons.exceptions.OrderNotFoundException;
 import com.revify.monolith.commons.finance.Price;
+import com.revify.monolith.commons.messaging.KafkaTopic;
+import com.revify.monolith.commons.models.orders.OrderAdditionalStatus;
+import com.revify.monolith.commons.models.orders.OrderShipmentStatus;
+import com.revify.monolith.commons.models.orders.OrderStatusUpdateRequest;
 import com.revify.monolith.currency_reader.service.CurrencyService;
 import com.revify.monolith.finance.messaging.DelayProducer;
 import com.revify.monolith.finance.model.addons.PaymentExecutionStatus;
-import com.revify.monolith.finance.model.jpa.BePaidPaymentSystemAccount;
 import com.revify.monolith.finance.model.jpa.PaymentSystemAccount;
 import com.revify.monolith.finance.model.jpa.StripePaymentSystemAccount;
 import com.revify.monolith.finance.model.jpa.payment.Payment;
@@ -24,12 +25,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -48,7 +51,33 @@ public class OrderPaymentService {
 
     private final MongoTemplate mongoTemplate;
 
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+
     private final StripeRecipientManagementService stripeRecipientManagementService;
+
+    public void changePaymentStatus(PaymentIntent paymentIntent) {
+        Payment byPaymentIntentId = paymentRepository.findByPaymentIntentId(paymentIntent.getId());
+        if (byPaymentIntentId != null) {
+            byPaymentIntentId.setPaymentIdempotencyKey(paymentIntent.getLastResponse().idempotencyKey());
+            PaymentExecutionStatus status = Objects.equals(paymentIntent.getStatus(), "succeeded") ? PaymentExecutionStatus.EXECUTED
+                    : PaymentExecutionStatus.FAILED;
+            if (byPaymentIntentId.getExecutionStatus().isAfter(status)) {
+                throw new RuntimeException("Payment status is after execution status");
+            }
+            byPaymentIntentId.setExecutionStatus(status);
+            byPaymentIntentId.setExecutedSuccessfully(true);
+            byPaymentIntentId.setExecutedAt(Instant.now().toEpochMilli());
+
+            paymentRepository.save(byPaymentIntentId);
+
+            kafkaTemplate.send(KafkaTopic.ORDER_STATUS_UPDATE, new OrderStatusUpdateRequest(
+                    byPaymentIntentId.getOrderId(),
+                    OrderShipmentStatus.PREPARING,
+                    OrderAdditionalStatus.PAYMENTS_RECEIVED));
+
+            mongoTemplate.save(paymentIntent);
+        }
+    }
 
     public List<Payment> processPayment(String orderId) {
         Order order = mongoTemplate.findById(orderId, Order.class);

@@ -19,4 +19,6 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
     List<Payment> findByAccountId(@Param("userId") Long userId, Pageable pageable);
 
     List<Payment> findByOrderId(@Param("orderId") String orderId);
+
+    Payment findByPaymentIntentId(@Param("paymentIntentId") String paymentIntentId);
 }
