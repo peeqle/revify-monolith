@@ -54,6 +54,24 @@
       "vhost": "/",
       "durable": true,
       "arguments": {}
+    },
+    {
+      "name": "order-delivery-queue",
+      "vhost": "/",
+      "durable": true,
+      "arguments": {}
+    },
+    {
+      "name": "order-summary-queue",
+      "vhost": "/",
+      "durable": true,
+      "arguments": {}
+    },
+    {
+      "name": "payment-expiration-queue",
+      "vhost": "/",
+      "durable": true,
+      "arguments": {}
     }
   ],
   "parameters": [],

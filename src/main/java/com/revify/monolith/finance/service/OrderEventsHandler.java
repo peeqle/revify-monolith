@@ -11,6 +11,7 @@ import com.revify.monolith.finance.service.repository.PaymentRepository;
 import com.revify.monolith.orders.models.Order;
 import com.revify.monolith.orders.service.OrderService;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
@@ -33,6 +34,7 @@ public class OrderEventsHandler {
 
     private final Gson gson = new GsonBuilder().create();
 
+    @Transactional
     @RabbitListener(queues = RabbitMqEndpointsConfiguration.PAYMENT_EXPIRATION)
     public void handlePaymentExpiration(String messagePayload, Message message) {
         Long receivedDelay = message.getMessageProperties().getReceivedDelayLong();

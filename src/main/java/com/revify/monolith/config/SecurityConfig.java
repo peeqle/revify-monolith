@@ -47,7 +47,10 @@ public class SecurityConfig {
                                 "/account/create",
                                 "/auth/login",
                                 "/auth/logout",
-                                "/auth/refresh").permitAll()
+                                "/auth/refresh",
+                                "/account-activities/phone-code-enable",
+                                "/account-activities/phone-code-resend"
+                                ).permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer((oauth2) ->
                         oauth2.jwt(jwtConfigurer ->

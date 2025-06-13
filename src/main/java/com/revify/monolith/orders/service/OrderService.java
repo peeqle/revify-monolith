@@ -20,6 +20,7 @@ import com.revify.monolith.orders.models.Delay;
 import com.revify.monolith.orders.models.Order;
 import com.revify.monolith.orders.models.PathSegment;
 import io.vavr.Tuple2;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -92,7 +93,8 @@ public class OrderService {
         }
     }
 
-    @RabbitListener(queues = RabbitMqEndpointsConfiguration.ORDER_SUMMARY)
+    @Transactional
+    @RabbitListener(queues = RabbitMqEndpointsConfiguration.ORDER_DELIVERY)
     public void handleOrderDeliveryTracker(String messagePayload, Message message) {
         log.info("UNIMPLEMENTED MESSAGE");
         TypeToken<Map<String, String>> type = new TypeToken<>() {

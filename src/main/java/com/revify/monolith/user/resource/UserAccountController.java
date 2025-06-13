@@ -17,8 +17,8 @@ import com.revify.monolith.user.service.ValidationException;
 import com.revify.monolith.user.service.WriteUserService;
 import com.revify.monolith.user.service.phone_messaging.PhoneInteractionService;
 import com.revify.monolith.user.service.util.RequestValidator;
-import com.vonage.client.verify.CheckRequest;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -50,6 +50,7 @@ public class UserAccountController {
     }
 
     @PostMapping("/create")
+    @Transactional
     public ResponseEntity<?> createUserAccount(@RequestBody RegisterRequest registerRequest, HttpServletRequest request) {
         if (registerRequest != null) {
             registerRequest.setIp(request.getRemoteAddr());
@@ -57,7 +58,7 @@ public class UserAccountController {
             try {
                 AppUser appUser = writeUserService.tryCreateUser(registerRequest);
 
-//                PhoneVerificationCode phoneVerificationCode = phoneInteractionService.verifyPhone(appUser);
+                phoneInteractionService.verifyPhone(appUser);
                 kafkaIntegrationService.sendKafkaUserContext(appUser.getCommonUserInfo());
                 kafkaIntegrationService.createChatUser(appUser, registerRequest.getPassword());
 
@@ -65,7 +66,7 @@ public class UserAccountController {
             } catch (UserCreationException e) {
                 log.warn("User creation exception: {}", registerRequest.getUsername(), e);
                 return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body("User cannot be created");
-            }catch (ValidationException e) {
+            } catch (ValidationException e) {
                 return ResponseEntity.badRequest().body(e.getValidationContexts());
             }
         }

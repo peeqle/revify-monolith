@@ -5,8 +5,6 @@ import com.revify.monolith.commons.exceptions.LockedUserOperationsException;
 import com.revify.monolith.commons.exceptions.UnauthorizedAccessError;
 import com.revify.monolith.commons.exceptions.UserPersistenceException;
 import com.revify.monolith.commons.exceptions.UserSessionException;
-import com.revify.monolith.commons.models.auth.AccountActivationResponse;
-import com.revify.monolith.commons.models.auth.Response;
 import com.revify.monolith.commons.models.user.UpdateAccountRequest;
 import com.revify.monolith.commons.models.user.UpdateUserResponse;
 import com.revify.monolith.keycloak.KeycloakService;
@@ -15,15 +13,20 @@ import com.revify.monolith.user.models.user.AppUser;
 import com.revify.monolith.user.service.phone_messaging.PhoneInteractionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.env.Environment;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.revify.monolith.commons.ValidationContext.REGISTRATION_CODE_NOT_VALID;
+import static com.revify.monolith.commons.ValidationContext.USER_NOT_PERSIST;
 
 
 @Slf4j
@@ -41,6 +44,8 @@ public class UserService {
 
     private final KeycloakService keycloakService;
 
+    private final Environment environment;
+
     public boolean disableUser() throws UnauthorizedAccessError {
         AppUser appUser = readUserService.loadUserById(UserUtils.getUserId());
         if (appUser != null) {
@@ -49,7 +54,7 @@ public class UserService {
 
                 appUser.setEnabled(false);
                 writeUserService.saveUser(appUser);
-            }catch (Exception e) {
+            } catch (Exception e) {
                 throw new UnauthorizedAccessError(e.getMessage());
             }
             return true;
@@ -126,12 +131,13 @@ public class UserService {
         return updateUserResponse;
     }
 
-    public Response checkCodeAndEnable(String code) {
-        AppUser appUser = readUserService.loadUserById(UserUtils.getUserId());
+    public HttpStatus checkCodeAndEnable(String phone, String code) {
+        Optional<AppUser> appUserOpt = readUserService.loadUserByPhone(phone);
+        PhoneVerificationCode lastUserCode = phoneInteractionService.findLastUserCode(appUserOpt.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cannot find specified user")));
 
-        PhoneVerificationCode lastUserCode = phoneInteractionService.findLastUserCode(appUser);
+        AppUser appUser = appUserOpt.get();
         if (lastUserCode != null) {
-            if (lastUserCode.getCode().equals(code)) {
+            if (lastUserCode.getCode().equals(code) || environment.matchesProfiles("dev")) {
                 appUser.setEnabled(true);
                 writeUserService.store(appUser);
 
@@ -139,14 +145,14 @@ public class UserService {
                     keycloakService.changeUserAvailability(appUser.getUsername(), true);
                 } catch (Exception e) {
                     log.error("Cannot update user after code being accepted.", e);
-                    throw new RuntimeException(e);
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
                 }
                 phoneInteractionService.removeAllForUser(appUser);
-                return Response.success();
+                return HttpStatus.OK;
             }
-            return new Response(REGISTRATION_CODE_NOT_VALID);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, REGISTRATION_CODE_NOT_VALID.name());
         }
         phoneInteractionService.removeAllForUser(appUser);
-        return new AccountActivationResponse(null, true);
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, USER_NOT_PERSIST.name());
     }
 }

@@ -20,13 +20,13 @@ public class PhoneActivationController {
     private final PhoneInteractionService phoneInteractionService;
 
     @PostMapping("/phone-code-enable")
-    public ResponseEntity<?> enableWithCode(@RequestParam("providedCode") String providedCode) {
-        return ResponseEntity.ok(userService.checkCodeAndEnable(providedCode));
+    public ResponseEntity<?> enableWithCode(@RequestParam("phone") String phone, @RequestParam("providedCode") String providedCode) {
+        return ResponseEntity.ok(userService.checkCodeAndEnable(phone, providedCode));
     }
 
     @PostMapping("/phone-code-resend")
-    public ResponseEntity<?> resendCode() {
-        phoneInteractionService.retryCodeVerification();
+    public ResponseEntity<?> resendCode(@RequestParam("phone") String phone) {
+        phoneInteractionService.retryCodeVerification(phone);
         return ResponseEntity.ok(Response.success());
     }
 }

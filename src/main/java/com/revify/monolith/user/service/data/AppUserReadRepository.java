@@ -24,6 +24,7 @@ public interface AppUserReadRepository extends JpaRepository<AppUser, Long> {
 
     Optional<AppUser> findAppUserByUsername(String username);
     Optional<AppUser> findAppUserByEmail(String email);
+    Optional<AppUser> findAppUserByPhoneNumber(String phone);
 
     List<AppUser> findAllByUsernameIsLikeIgnoreCase(String pattern);
 

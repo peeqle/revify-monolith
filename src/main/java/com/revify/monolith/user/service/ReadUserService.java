@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import javax.swing.text.html.Option;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,6 +40,16 @@ public class ReadUserService extends CrudService<AppUser> {
             }
         }
         throw new UsernameNotFoundException("Cannot find user with email: " + email);
+    }
+
+    public Optional<AppUser> loadUserByPhone(String phone) {
+        if (phone != null && !phone.isEmpty()) {
+            Optional<AppUser> appUser = repository.findAppUserByPhoneNumber(phone);
+            if (appUser.isPresent()) {
+                return appUser;
+            }
+        }
+        throw new UsernameNotFoundException("Cannot find user with phone: " + phone);
     }
 
     public AppUser loadUserByUsername(String username) {
