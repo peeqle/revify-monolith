@@ -71,3 +71,6 @@ logging:
     org.apache.kafka: WARN
     org.springframework.web: WARN
     com.mongodb: DEBUG
+    org.springframework.web.socket: DEBUG
+    org.springframework.messaging: DEBUG
+    org.springframework.security.web.socket: DEBUG

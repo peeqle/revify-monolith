@@ -4,6 +4,7 @@ import com.revify.monolith.bid.messaging.OrderProducer;
 import com.revify.monolith.bid.models.Auction;
 import com.revify.monolith.bid.models.Bid;
 import com.revify.monolith.commons.auth.sync.UserUtils;
+import com.revify.monolith.commons.bids.BidDTO;
 import com.revify.monolith.commons.models.bid.BidCreationRequest;
 import com.revify.monolith.currency_reader.service.CurrencyService;
 import com.revify.monolith.items.service.item.ItemReadService;
@@ -15,6 +16,7 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -33,7 +35,8 @@ public class ManagementService {
     private final AuctionService auctionService;
 
     private final OrderProducer orderProducer;
-    private final ItemReadService itemReadService;
+
+    private final SimpMessagingTemplate simpMessagingTemplate;
 
     public Bid findById(ObjectId id) {
         return mongoTemplate.findById(id, Bid.class);
@@ -114,6 +117,8 @@ public class ManagementService {
         } else {
             lastBidForAuction = tryCreateBid(auction, newBid, lastBidForAuction, countLastBids(auction));
         }
+
+        simpMessagingTemplate.convertAndSend("/topic/bids/update/" + auction.getItemId(), BidDTO.from(lastBidForAuction));
 
         return lastBidForAuction;
     }

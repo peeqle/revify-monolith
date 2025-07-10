@@ -28,6 +28,18 @@ public class ConnectorTopicConfig {
     }
 
     @Bean
+    Queue bidsUpdatesQueue() {
+        return new Queue("bids.updates.queue", true, false, false); // durable, not exclusive, not autoDelete
+    }
+
+    @Bean
+    public Binding bidsUpdatesBinding(Queue bidsUpdatesQueue) {
+        return BindingBuilder.bind(bidsUpdatesQueue)
+                .to(new TopicExchange("amq.topic"))
+                .with("bids.updates.#");
+    }
+
+    @Bean
     Binding topicBinding(TopicExchange exchange) {
         return BindingBuilder.bind(courierNotificationQueue()).to(exchange).with("user.notification.#");
     }

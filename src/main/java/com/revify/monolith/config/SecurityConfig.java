@@ -4,14 +4,19 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpMethod;
 import org.springframework.messaging.Message;
+import org.springframework.messaging.simp.SimpMessageType;
+import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.security.authorization.AuthorizationManager;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.annotation.web.socket.EnableWebSocketSecurity;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -35,11 +40,19 @@ import java.util.stream.Collectors;
 public class SecurityConfig {
     private static final String RESOURCE_REALM_CLIENT_NAME = "revify-client";
 
+    @Order(Ordered.HIGHEST_PRECEDENCE)
+    @Bean(name = "csrfChannelInterceptor")
+    public ChannelInterceptor noopChannelInterceptor() {
+        return new ChannelInterceptor() {
+        };
+    }
+
     @Bean
     @Primary
     SecurityFilterChain resourceSecurityFilterChain(final HttpSecurity httpSecurity) throws Exception {
         httpSecurity
                 .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/ws/**").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
                                 "hook/stripe",
@@ -50,23 +63,26 @@ public class SecurityConfig {
                                 "/auth/refresh",
                                 "/account-activities/phone-code-enable",
                                 "/account-activities/phone-code-resend"
-                                ).permitAll()
+                        ).permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer((oauth2) ->
                         oauth2.jwt(jwtConfigurer ->
-                                jwtConfigurer.jwtAuthenticationConverter(jwtAuthenticationConverter())));
+                                jwtConfigurer.jwtAuthenticationConverter(jwtAuthenticationConverter())))
+                .headers(headers -> headers
+                        .frameOptions(HeadersConfigurer.FrameOptionsConfig::disable)
+                        .httpStrictTransportSecurity(HeadersConfigurer.HstsConfig::disable));
         httpSecurity.csrf(AbstractHttpConfigurer::disable);
         return httpSecurity.build();
     }
 
-//    @Bean
-//    public AuthorizationManager<Message<?>> messageAuthorizationManager(MessageMatcherDelegatingAuthorizationManager.Builder messages) {
-//        messages
-//                .simpDestMatchers("/user/**", "/item/**", "/bid/**").hasRole("USER")
-//                .simpDestMatchers("/admin/**").hasRole("ADMIN")
-//                .anyMessage().denyAll();
-//        return messages.build();
-//    }
+
+    @Bean
+    public AuthorizationManager<Message<?>> messageAuthorizationManager(MessageMatcherDelegatingAuthorizationManager.Builder messages) {
+        messages
+                .simpTypeMatchers(SimpMessageType.CONNECT, SimpMessageType.HEARTBEAT, SimpMessageType.UNSUBSCRIBE, SimpMessageType.DISCONNECT).permitAll()
+                .anyMessage().authenticated();
+        return messages.build();
+    }
 
     @Bean
     CorsConfigurationSource corsConfigurationSource() {

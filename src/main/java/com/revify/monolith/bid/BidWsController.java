@@ -1,29 +1,21 @@
 package com.revify.monolith.bid;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.messaging.handler.annotation.DestinationVariable;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.simp.annotation.SubscribeMapping;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.User;
+import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PathVariable;
 
+@Slf4j
 @Controller
 @RequiredArgsConstructor
 public class BidWsController {
 
-
-//    @MessageMapping("/bids/{itemId}/send")
-//    public void sendItemMessage(
-//            @DestinationVariable String itemId,
-//            String message,
-//            @AuthenticationPrincipal User user) {
-//
-//        System.out.println("Received message for item " + itemId + " from " + user.getUsername());
-//
-//        // Send to item-specific topic
-//        messagingTemplate.convertAndSend("/topic/items/" + itemId, message);
-//
-//        // You could also send to RabbitMQ here if needed
-//    }
+    @MessageMapping("/subscribe/item/bids/{itemId}")
+    @SendTo("/topic/bids/updates/{itemId}")
+    public String subscribeBidsUpdates(@PathVariable String itemId) {
+        log.debug("Client subscribed to item updates for item ID: " + itemId);
+        return "Subscribed to item updates for item ID: " + itemId;
+    }
 }

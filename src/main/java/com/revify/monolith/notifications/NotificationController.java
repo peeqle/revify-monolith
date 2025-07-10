@@ -4,6 +4,7 @@ import com.revify.monolith.notifications.models.Notification;
 import com.revify.monolith.notifications.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.bson.types.ObjectId;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,6 +24,11 @@ public class NotificationController {
         return ResponseEntity.ok(notificationService.fetchUserNotifications()
                 .stream().map(Notification.NotificationDTO::from)
                 .collect(Collectors.toList()));
+    }
+
+    @PostMapping("/read")
+    public void readNotification(@RequestBody ObjectId notificationId) {
+        notificationService.readNotification(notificationId);
     }
 
     @DeleteMapping

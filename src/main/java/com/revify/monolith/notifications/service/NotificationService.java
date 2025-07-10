@@ -3,13 +3,16 @@ package com.revify.monolith.notifications.service;
 import com.revify.monolith.commons.auth.sync.UserUtils;
 import com.revify.monolith.notifications.models.Notification;
 import lombok.RequiredArgsConstructor;
+import org.bson.types.ObjectId;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
@@ -33,8 +36,12 @@ public class NotificationService {
     }
 
     public List<Notification> fetchUserNotifications() {
+        Long currentUserId = UserUtils.getUserId();
+
         Query query = Query.query(
-                        Criteria.where("relatedUsers").in(UserUtils.getUserId())
+                        Criteria.where("relatedUsers").in(currentUserId)
+                                .and("readByUserIdsWithTimestamps")
+                                .nin(currentUserId)
                 )
                 .with(Sort.by(Sort.Direction.DESC, "createdAt"));
 
@@ -60,5 +67,13 @@ public class NotificationService {
                 mongoTemplate.save(notification);
             }
         }
+    }
+
+    public void readNotification(ObjectId notificationId) {
+        Query query = Query.query(Criteria.where("_id").is(notificationId));
+
+        Update update = new Update();
+        update.set("readByUserIdsWithTimestamps." + UserUtils.getUserId(), Instant.now().toEpochMilli());
+        mongoTemplate.updateFirst(query, update, Notification.class);
     }
 }
