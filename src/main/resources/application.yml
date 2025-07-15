@@ -62,15 +62,19 @@ keycloak:
   auth-server-url: ${KEYCLOAK_URL:http://localhost:8085}/auth
   realm: ${KEYCLOAK_REALM_NAME:realm-name}
 
+sentry:
+  dsn: ${SENTRY_DSN}
+  environment: dev
+
 server:
   port: 8001
   http2:
     enabled: true
-logging:
-  level:
-    org.apache.kafka: WARN
-    org.springframework.web: WARN
-    com.mongodb: DEBUG
-    org.springframework.web.socket: DEBUG
-    org.springframework.messaging: DEBUG
-    org.springframework.security.web.socket: DEBUG
+#logging:
+#  level:
+#    org.apache.kafka: WARN
+#    org.springframework.web: WARN
+#    com.mongodb: DEBUG
+#    org.springframework.web.socket: DEBUG
+#    org.springframework.messaging: DEBUG
+#    org.springframework.security.web.socket: DEBUG

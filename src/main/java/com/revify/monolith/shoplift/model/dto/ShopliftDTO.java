@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Set;
 
 public record ShopliftDTO(String id, String title, String description, List<ShopDTO> shops,
-                          Long courierId, Set<Long> additionalCourierIds, GeoLocation destination,
+                          Long creatorId, Set<Long> involvedCourierIds, GeoLocation destination,
                           Set<Category> presentCategories, Set<Category> projectedCategories,
                           Set<String> items,
                           Price minEntryDeliveryPrice, Price maxEntryPrice, Integer entries, Long deliveryCutoffTime,
@@ -20,8 +20,8 @@ public record ShopliftDTO(String id, String title, String description, List<Shop
                 shoplift.getTitle(),
                 shoplift.getDescription(),
                 shops,
-                shoplift.getCourierId(),
-                shoplift.getAdditionalCourierIds(),
+                shoplift.getCreatorId(),
+                shoplift.getInvolvedCourierIds(),
                 shoplift.getDestination(),
                 shoplift.getPresentCategories(),
                 shoplift.getProjectedCategories(),

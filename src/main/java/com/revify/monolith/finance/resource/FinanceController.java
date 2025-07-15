@@ -49,6 +49,12 @@ public class FinanceController {
         return ResponseEntity.ok(recipientService.getUserPaymentMethods());
     }
 
+    @DeleteMapping
+    public ResponseEntity<Object> removePaymentMethod(@RequestParam("paymentMethodId") String paymentMethodId) {
+        recipientService.removeUserPaymentMethod(paymentMethodId);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/order/payments")
     public ResponseEntity<List<PaymentDTO>> getUserActivePayments(@RequestParam Integer offset, @RequestParam Integer limit) {
         return ResponseEntity.ok(orderPaymentService.getUserPayments(offset, limit).stream().map(PaymentDTO::from).toList());

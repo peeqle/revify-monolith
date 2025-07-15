@@ -27,6 +27,11 @@ public class Price implements Comparable<Price> {
                 .build();
     }
 
+    public Price add(BigDecimal amount) {
+        this.amount = this.amount.add(amount);
+        return this;
+    }
+
     public static class Builder {
 
         private Currency currency;

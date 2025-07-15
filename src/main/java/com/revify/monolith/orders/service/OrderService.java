@@ -73,18 +73,18 @@ public class OrderService {
         Map<String, String> stringStringMap = gson.fromJson(messagePayload, type);
         if (stringStringMap != null && stringStringMap.containsKey("orderId")) {
             Order order = findOrderById(stringStringMap.get("orderId"));
-            if(order != null) {
+            if (order != null) {
                 List<Payment> payments = orderPaymentService.findForOrder(order.getId().toHexString());
-                for(Payment payment : payments) {
+                for (Payment payment : payments) {
                     PaymentSystemAccount account = payment.getAccount();
-                    if(!payment.getExecutedSuccessfully() || !payment.getExecutionStatus().equals(PaymentExecutionStatus.EXECUTED)) {
+                    if (!payment.getExecutedSuccessfully() || !payment.getExecutionStatus().equals(PaymentExecutionStatus.EXECUTED)) {
                         order.setItems(order.getItems().stream().filter(e -> payment.getItems().contains(e)).collect(Collectors.toSet()));
                         order.setReceivers(order.getReceivers().stream().filter(e -> Objects.equals(account.getSystemUserId(), e)).collect(Collectors.toSet()));
                     }
                 }
 
                 order.setPaid(true);
-                order.setDeliveryTimeEnd(Instant.now().plus(7,ChronoUnit.DAYS).toEpochMilli());
+                order.setDeliveryTimeEnd(Instant.now().plus(7, ChronoUnit.DAYS).toEpochMilli());
                 order.setStatus(OrderShipmentStatus.PREPARING);
                 order.setAdditionalStatus(OrderAdditionalStatus.PAYMENTS_RECEIVED);
                 mongoTemplate.save(order);
@@ -121,10 +121,9 @@ public class OrderService {
         if (order.getId() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order creation failed");
         }
-        {
-            delayProducer.sendOrderSummarization(order.getId().toHexString(), orderDto.paymentsCutoff() == null ?
-                    3 * 1000 * 60 * 60 * 24 : orderDto.paymentsCutoff());
-        }
+
+        delayProducer.sendOrderSummarization(order.getId().toHexString(), orderDto.paymentsCutoff() == null ?
+                3 * 1000 * 60 * 60 * 24 : orderDto.paymentsCutoff());
         saveShipmentParticles(order);
         orderPaymentService.processPayment(order, false);
 

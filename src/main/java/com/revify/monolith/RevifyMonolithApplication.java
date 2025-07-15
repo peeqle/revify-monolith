@@ -6,10 +6,11 @@ import com.stripe.Stripe;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 
 @EnableJpaRepositories
 @SpringBootApplication
@@ -33,5 +34,10 @@ public class RevifyMonolithApplication {
             return;
         }
         throw new PaymentServiceInitializationException("Cannot configure Stripe credentials from configuration, stripe is null");
+    }
+
+    @ExceptionHandler(NullPointerException.class)
+    public ResponseEntity<Object> npeHandler() {
+        return ResponseEntity.notFound().build();
     }
 }

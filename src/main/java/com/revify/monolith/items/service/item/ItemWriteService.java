@@ -57,15 +57,9 @@ public class ItemWriteService {
         }
 
         if (itemCreationDTO.shoplift().getShopliftId() == null || itemCreationDTO.shoplift().getShopliftId().isBlank()) {
-            {
-                //create auction
-                auctionService.createAuction(AuctionCreationRequest.defaultBuilder()
-                        .bidsAcceptingTill(newItem.getValidUntil())
-                        .itemId(newItem.getId().toHexString())
-                        .userId(UserUtils.getUserId())
-                        .maximumRequiredBidPrice(newItem.getItemDescription().getMaximumRequiredBidPrice())
-                        .build());
-            }
+            //create auction
+            toggleAuctionCreateForItem(newItem);
+
             //create composite item
             if (newItem.getItemDescription().getCompositeStackingEnabled()) {
                 compositeItemService.createCompositeInstance(newItem.getId().toHexString());
@@ -118,5 +112,14 @@ public class ItemWriteService {
         }
 
         return item;
+    }
+
+    public void toggleAuctionCreateForItem(Item newItem) {
+        auctionService.createAuction(AuctionCreationRequest.defaultBuilder()
+                .bidsAcceptingTill(newItem.getValidUntil())
+                .itemId(newItem.getId().toHexString())
+                .userId(UserUtils.getUserId())
+                .maximumRequiredBidPrice(newItem.getItemDescription().getMaximumRequiredBidPrice())
+                .build());
     }
 }

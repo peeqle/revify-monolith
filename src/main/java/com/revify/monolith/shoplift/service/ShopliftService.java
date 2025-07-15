@@ -5,11 +5,20 @@ import com.revify.monolith.commons.auth.sync.UserUtils;
 import com.revify.monolith.commons.finance.Currency;
 import com.revify.monolith.commons.finance.Price;
 import com.revify.monolith.commons.items.Category;
+import com.revify.monolith.commons.models.orders.OrderAdditionalStatus;
+import com.revify.monolith.commons.models.orders.OrderCreationDTO;
+import com.revify.monolith.commons.models.orders.OrderShipmentParticle;
+import com.revify.monolith.commons.models.orders.OrderShipmentStatus;
 import com.revify.monolith.currency_reader.service.CurrencyService;
 import com.revify.monolith.geo.model.GeoLocation;
+import com.revify.monolith.geo.model.UserGeolocation;
 import com.revify.monolith.geo.service.GeolocationService;
+import com.revify.monolith.history.HistoryService;
+import com.revify.monolith.history.model.ShopliftEvent;
+import com.revify.monolith.history.model.ShopliftItemEvent;
 import com.revify.monolith.items.model.item.Item;
 import com.revify.monolith.items.service.item.ItemReadService;
+import com.revify.monolith.orders.service.OrderService;
 import com.revify.monolith.shoplift.model.Filter;
 import com.revify.monolith.shoplift.model.Shop;
 import com.revify.monolith.shoplift.model.Shoplift;
@@ -34,10 +43,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.revify.monolith.commons.messaging.KafkaTopic.ITEM_ADD_SHOPLIFT;
@@ -58,6 +64,10 @@ public class ShopliftService {
     private final ShopRepository shopRepository;
 
     private final ReadUserService readUserService;
+
+    private final HistoryService historyService;
+
+    private final OrderService orderService;
 
     @KafkaListener(topics = ITEM_ADD_SHOPLIFT)
     public void addItem(@Payload String itemId) {
@@ -108,20 +118,49 @@ public class ShopliftService {
         if (shoplift == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing 'shopliftId' field");
         }
-        if (shoplift.getCourierId() != UserUtils.getUserId() && !shoplift.getAdditionalCourierIds().contains(UserUtils.getUserId())) {
+        if (shoplift.getCreatorId() != UserUtils.getUserId() && !shoplift.getInvolvedCourierIds().contains(UserUtils.getUserId())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You are not allowed to accept shoplifting");
         }
 
         List<Item> existingItems = itemReadService.findForIds(req.getItems());
-        for (Item item : existingItems) {
-            shoplift.getConnectedItems().add(item.getId().toHexString());
-
-            item.setPicked(true);
-            item.setShopliftId(shoplift.getId().toHexString());
-            mongoTemplate.save(item);
-        }
+        shoplift.getConnectedItems().addAll(existingItems.stream().map(Item::getId).map(ObjectId::toHexString)
+                .collect(Collectors.toSet()));
 
         mongoTemplate.save(shoplift);
+        createShopliftingOrders(shoplift, existingItems, UserUtils.getUserId());
+
+        historyService.event(ShopliftEvent.builder()
+                .shopliftId(shoplift.getId().toHexString())
+                .actorId(UserUtils.getUserId())
+                .description(shoplift.toString())
+                .build());
+    }
+
+    public void createShopliftingOrders(Shoplift shoplift, List<Item> involvedItems, Long courierId) {
+        for (Item item : involvedItems) {
+            Price finalPrice = shoplift.getMinEntryDeliveryPrice();
+            if (shoplift.getMinEntryDeliveryPrice().getCurrency() != item.getPrice().getCurrency()) {
+                finalPrice.add(currencyService.convertTo(item.getPrice(), finalPrice.getCurrency()));
+            }
+
+            orderService.createOrder(OrderCreationDTO.builder()
+                    .receivers(Collections.singletonList(item.getCreatorId()))
+                    .items(Collections.singletonList(item.getId().toHexString()))
+                    .status(OrderShipmentStatus.CREATED)
+                    .additionalStatus(OrderAdditionalStatus.CLIENT_PAYMENT_AWAIT)
+                    .shipmentParticle(prepareShopliftParticle(courierId, item, finalPrice))
+                    .deliveryTimeEnd(shoplift.getDeliveryCutoffTime())
+                    .isShoplift(true)
+                    .build());
+
+            historyService.event(ShopliftItemEvent.builder()
+                    .actorId(courierId)
+                    .itemId(item.getId().toHexString())
+                    .shopliftId(shoplift.getId().toHexString())
+                    .timestamp(Instant.now().toEpochMilli())
+                    .type(ShopliftItemEvent.EventType.ORDER_CREATION)
+                    .build());
+        }
     }
 
     public Query createFindForCategoriesQuery(Set<Category> categories, GeoLocation itemDestination, Price EURmaxRequiredPrice) {
@@ -195,7 +234,9 @@ public class ShopliftService {
         newShoplift.setProjectedCategories(projectedCategories);
         newShoplift.setPresentCategories(shoplift.getPresentCategories().stream()
                 .map(Category::valueOf).collect(Collectors.toSet()));
-        newShoplift.setCourierId(UserUtils.getUserId());
+        newShoplift.setInvolvedCourierIds(Set.of(UserUtils.getUserId()));
+
+        newShoplift.setCreatorId(UserUtils.getUserId());
         newShoplift.setDestination(destination);
         newShoplift.setCreatedAt(Instant.now().toEpochMilli());
         newShoplift.setUpdatedAt(Instant.now().toEpochMilli());
@@ -213,12 +254,28 @@ public class ShopliftService {
 
     public void disable(String shopliftId) {
         Shoplift byId = getById(shopliftId);
-        if (byId == null || byId.getCourierId() != UserUtils.getUserId()) {
+        if (byId == null || byId.getCreatorId() != UserUtils.getUserId()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot modify shoplift");
         }
 
         byId.setIsActive(false);
         byId.setUpdatedAt(Instant.now().toEpochMilli());
         mongoTemplate.save(byId);
+    }
+
+    private OrderShipmentParticle prepareShopliftParticle(Long courierId, Item item, Price finalPrice) {
+        OrderShipmentParticle.OrderShipmentParticleBuilder builder = OrderShipmentParticle.builder();
+        builder.price(finalPrice);
+        builder.courierId(courierId);
+        builder.to(item.getItemDescription().getDestination());
+
+        UserGeolocation latestUserGeolocation = geolocationService.findLatestUserGeolocation(courierId);
+        if (latestUserGeolocation != null) {
+            builder.from(latestUserGeolocation.getGeoLocation());
+        }
+
+        builder.deliveryTimeEstimated(1000L * 60 * 60 * 24 * 7);
+
+        return builder.build();
     }
 }

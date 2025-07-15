@@ -7,14 +7,12 @@ import com.revify.monolith.commons.messaging.dto.finance.RecipientCreation;
 import com.revify.monolith.currency_reader.service.CurrencyService;
 import com.revify.monolith.finance.RecipientProcessor;
 import com.revify.monolith.finance.config.PaymentProcessingProperties;
-import com.revify.monolith.finance.model.exc.PaymentServiceInitializationException;
 import com.revify.monolith.finance.model.jpa.PaymentSystemAccount;
 import com.revify.monolith.finance.model.jpa.payment.Payment;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.*;
 import com.stripe.param.*;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -71,6 +69,17 @@ public class StripeRecipientManagementService implements RecipientProcessor<Cust
                     .build();
 
             return PaymentMethod.list(params);
+        } catch (StripeException e) {
+            throw new RuntimeException("Error fetching payment methods", e);
+        }
+    }
+
+    public void removeAssociatedPaymentMethod(String accountId, String paymentMethodId) {
+        try {
+            PaymentMethod resource = PaymentMethod.retrieve(paymentMethodId);
+            PaymentMethodDetachParams params = PaymentMethodDetachParams.builder().build();
+
+            resource.detach(params);
         } catch (StripeException e) {
             throw new RuntimeException("Error fetching payment methods", e);
         }

@@ -34,6 +34,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 
+import static com.revify.monolith.commons.auth.sync.UserUtils.getKeycloakId;
 import static com.revify.monolith.commons.auth.sync.UserUtils.getUserId;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -89,6 +90,16 @@ public class RecipientService {
         }
 
         return paymentMethods;
+    }
+
+    public void removeUserPaymentMethod(String paymentMethodId) {
+        List<PaymentSystemAccount> paymentSystemAccounts = fetchForUser(getUserId());
+
+        for (PaymentSystemAccount paymentSystemAccount : paymentSystemAccounts) {
+            if(paymentSystemAccount instanceof StripePaymentSystemAccount) {
+                stripeRecipientManagementService.removeAssociatedPaymentMethod(paymentSystemAccount.getAccountId(), paymentMethodId);
+            }
+        }
     }
 
     public String prepareIntent(String paymentSystemUserId) {

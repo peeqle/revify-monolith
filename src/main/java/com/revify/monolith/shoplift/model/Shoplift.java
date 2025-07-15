@@ -1,11 +1,9 @@
 package com.revify.monolith.shoplift.model;
 
-import com.revify.monolith.commons.finance.Currency;
 import com.revify.monolith.commons.finance.Price;
 import com.revify.monolith.commons.items.Category;
 import com.revify.monolith.geo.model.GeoLocation;
 import com.revify.monolith.shoplift.model.req.Create_Shoplift;
-import jdk.jfr.Timestamp;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -30,8 +28,8 @@ public class Shoplift {
 
     private List<String> shopIds;
 
-    private Long courierId;
-    private Set<Long> additionalCourierIds;
+    private Long creatorId;
+    private Set<Long> involvedCourierIds;
 
     private GeoLocation destination;
 
