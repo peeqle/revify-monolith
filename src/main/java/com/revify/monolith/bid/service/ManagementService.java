@@ -23,8 +23,8 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Instant;
 import java.util.List;
 
-import static com.revify.monolith.RabbitQueues.ITEM_BID;
-import static com.revify.monolith.RabbitQueues.ITEM_UPDATE;
+import static com.revify.monolith.commons.messaging.WsQueues.ITEM_BID;
+import static com.revify.monolith.commons.messaging.WsQueues.ITEM_UPDATE;
 
 @Slf4j
 @Service

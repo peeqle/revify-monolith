@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 
-import static com.revify.monolith.RabbitQueues.ITEM_UPDATE;
+import static com.revify.monolith.commons.messaging.WsQueues.ITEM_UPDATE;
 
 @Slf4j
 @Component

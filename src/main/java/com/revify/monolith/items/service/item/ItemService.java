@@ -23,8 +23,8 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 
-import static com.revify.monolith.RabbitQueues.ITEM_UPDATE;
 import static com.revify.monolith.commons.messaging.KafkaTopic.AUCTION_CHANGES;
+import static com.revify.monolith.commons.messaging.WsQueues.ITEM_UPDATE;
 
 @Service
 @RequiredArgsConstructor

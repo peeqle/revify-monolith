@@ -8,7 +8,7 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode(callSuper = true)
 
 @SuperBuilder
-public class ShopliftEvent extends HistoryEvent {
+public class ShopliftHistoryEvent extends HistoryEvent {
     private String shopliftId;
 }
 

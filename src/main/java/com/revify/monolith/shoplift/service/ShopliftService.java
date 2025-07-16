@@ -1,10 +1,13 @@
 package com.revify.monolith.shoplift.service;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.mongodb.client.result.UpdateResult;
 import com.revify.monolith.commons.auth.sync.UserUtils;
 import com.revify.monolith.commons.finance.Currency;
 import com.revify.monolith.commons.finance.Price;
 import com.revify.monolith.commons.items.Category;
+import com.revify.monolith.commons.models.bid.AuctionChangesRequest;
 import com.revify.monolith.commons.models.orders.OrderAdditionalStatus;
 import com.revify.monolith.commons.models.orders.OrderCreationDTO;
 import com.revify.monolith.commons.models.orders.OrderShipmentParticle;
@@ -14,7 +17,7 @@ import com.revify.monolith.geo.model.GeoLocation;
 import com.revify.monolith.geo.model.UserGeolocation;
 import com.revify.monolith.geo.service.GeolocationService;
 import com.revify.monolith.history.HistoryService;
-import com.revify.monolith.history.model.ShopliftEvent;
+import com.revify.monolith.history.model.ShopliftHistoryEvent;
 import com.revify.monolith.history.model.ShopliftItemEvent;
 import com.revify.monolith.items.model.item.Item;
 import com.revify.monolith.items.service.item.ItemReadService;
@@ -22,6 +25,7 @@ import com.revify.monolith.orders.service.OrderService;
 import com.revify.monolith.shoplift.model.Filter;
 import com.revify.monolith.shoplift.model.Shop;
 import com.revify.monolith.shoplift.model.Shoplift;
+import com.revify.monolith.shoplift.model.ShopliftEvent;
 import com.revify.monolith.shoplift.model.req.Accept_Shoplift;
 import com.revify.monolith.shoplift.model.req.Create_Shoplift;
 import com.revify.monolith.shoplift.repo.ShopRepository;
@@ -37,7 +41,9 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.http.HttpStatus;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -46,12 +52,16 @@ import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.revify.monolith.commons.messaging.KafkaTopic.AUCTION_CHANGES;
 import static com.revify.monolith.commons.messaging.KafkaTopic.ITEM_ADD_SHOPLIFT;
+import static com.revify.monolith.commons.messaging.WsQueues.SHOPLIFT_EVENTS;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ShopliftService {
+
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     private final MongoTemplate mongoTemplate;
 
@@ -68,6 +78,10 @@ public class ShopliftService {
     private final HistoryService historyService;
 
     private final OrderService orderService;
+
+    private final SimpMessagingTemplate simpMessagingTemplate;
+
+    private final Gson gson = new GsonBuilder().create();
 
     @KafkaListener(topics = ITEM_ADD_SHOPLIFT)
     public void addItem(@Payload String itemId) {
@@ -110,7 +124,7 @@ public class ShopliftService {
             throw new RuntimeException("Shoplift cannot be found");
         }
 
-        if(item.getItemDescription().getCategories().stream().noneMatch(currentShoplift.getPresentCategories()::contains)) {
+        if (item.getItemDescription().getCategories().stream().noneMatch(currentShoplift.getPresentCategories()::contains)) {
             throw new RuntimeException("Item categories does not satisfy shoplift boundaries");
         }
 
@@ -132,13 +146,10 @@ public class ShopliftService {
         }
 
         List<Item> existingItems = itemReadService.findForIds(req.getItems());
-        shoplift.getConnectedItems().addAll(existingItems.stream().map(Item::getId).map(ObjectId::toHexString)
-                .collect(Collectors.toSet()));
 
-        mongoTemplate.save(shoplift);
         createShopliftingOrders(shoplift, existingItems, UserUtils.getUserId());
 
-        historyService.event(ShopliftEvent.builder()
+        historyService.event(ShopliftHistoryEvent.builder()
                 .shopliftId(shoplift.getId().toHexString())
                 .actorId(UserUtils.getUserId())
                 .description(shoplift.toString())
@@ -168,6 +179,30 @@ public class ShopliftService {
                     .shopliftId(shoplift.getId().toHexString())
                     .timestamp(Instant.now().toEpochMilli())
                     .type(ShopliftItemEvent.EventType.ORDER_CREATION)
+                    .build());
+
+            //saving item relation and picked-state from shoplift and disable auction for that item
+            {
+                item.setShopliftId(shoplift.getId().toHexString());
+                mongoTemplate.save(item);
+
+                //disable item auction
+                kafkaTemplate.send(AUCTION_CHANGES,
+                        gson.toJson(
+                                AuctionChangesRequest.builder()
+                                        .changeValidUntil(item.getValidUntil())
+                                        .isActive(false)
+                                        .itemId(item.getId().toHexString())
+                                        .build()
+                        )
+                );
+            }
+        }
+
+        if (!involvedItems.isEmpty()) {
+            simpMessagingTemplate.convertAndSend(SHOPLIFT_EVENTS + shoplift.getId().toHexString(), ShopliftEvent.builder()
+                    .activeAt(Instant.now().toEpochMilli())
+                    .type(ShopliftEvent.ShopliftEventType.ITEMS_CHANGED)
                     .build());
         }
     }
@@ -270,13 +305,13 @@ public class ShopliftService {
         return mongoTemplate.exists(Query.query(Criteria.where("_id").is(shopId)), Shop.class);
     }
 
-    public void disable(String shopliftId) {
+    public void disable(String shopliftId, boolean state) {
         Shoplift byId = getById(shopliftId);
         if (byId == null || byId.getCreatorId() != UserUtils.getUserId()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot modify shoplift");
         }
 
-        byId.setIsActive(false);
+        byId.setIsActive(state);
         byId.setUpdatedAt(Instant.now().toEpochMilli());
         mongoTemplate.save(byId);
     }

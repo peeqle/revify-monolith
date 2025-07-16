@@ -1,4 +1,4 @@
-package com.revify.monolith.items.model;
+package com.revify.monolith.shoplift.model;
 
 import com.revify.monolith.commons.messaging.MessagingEvent;
 import lombok.Data;
@@ -10,10 +10,12 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 
 @EqualsAndHashCode(callSuper = true)
-public class ItemEvent extends MessagingEvent {
-    ItemEventType type;
+public class ShopliftEvent extends MessagingEvent {
+    ShopliftEventType type;
 
-    public enum ItemEventType {
+    public enum ShopliftEventType {
+        ITEMS_CHANGED,
+        LOCATION_CHANGE,
         UPDATE,
         FINISH,
     }
