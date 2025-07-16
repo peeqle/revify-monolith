@@ -1,4 +1,4 @@
-package com.revify.monolith.user.service.phone_messaging;
+package com.revify.monolith.user.service.phone_messaging.code;
 
 import com.revify.monolith.user.models.PhoneVerificationCode;
 import com.revify.monolith.user.models.user.AppUser;

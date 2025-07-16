@@ -4,6 +4,7 @@ import com.revify.monolith.commons.models.auth.AccessTokenResponse;
 import com.revify.monolith.commons.models.auth.KeycloakLoginRequest;
 import com.revify.monolith.keycloak.KeycloakAuthService;
 import com.revify.monolith.keycloak.TokenResponse;
+import com.revify.monolith.user.ActivationSessionHolder;
 import com.revify.monolith.user.service.ReadUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,25 +21,31 @@ import static org.springframework.http.HttpStatus.NOT_ACCEPTABLE;
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
+
 public class LoginController {
 
     private final ReadUserService readUserService;
 
     private final KeycloakAuthService keycloakAuthService;
 
+    private final ActivationSessionHolder activationSessionHolder;
+
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@RequestBody KeycloakLoginRequest keycloakLoginRequest) {
         if (keycloakLoginRequest == null) {
             return ResponseEntity.status(400).body("Login request body is empty");
         }
+        activationSessionHolder.setEmail(keycloakLoginRequest.email());
 
         if (!readUserService.isUserActivated(keycloakLoginRequest.email())) {
-            return ResponseEntity.status(NOT_ACCEPTABLE).body("User is not activated");
+            activationSessionHolder.setActivationInProgress(true);
+            return ResponseEntity.status(NOT_ACCEPTABLE).build();
         }
 
         var tokens = keycloakAuthService.login(keycloakLoginRequest);
 
         if (tokens != null) {
+            activationSessionHolder.setActivationInProgress(false);
             return ResponseEntity.ok(createAccessTokenResponse(tokens));
         }
         return ResponseEntity.status(NOT_ACCEPTABLE).build();

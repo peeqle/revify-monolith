@@ -51,18 +51,19 @@ public class SecurityConfig {
     @Primary
     SecurityFilterChain resourceSecurityFilterChain(final HttpSecurity httpSecurity) throws Exception {
         httpSecurity
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/account-activities/phone-code-enable").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/account-activities/phone-code-resend").permitAll()
                         .requestMatchers(
                                 "hook/stripe",
                                 "/account/check",
                                 "/account/create",
                                 "/auth/login",
                                 "/auth/logout",
-                                "/auth/refresh",
-                                "/account-activities/phone-code-enable",
-                                "/account-activities/phone-code-resend"
+                                "/auth/refresh"
                         ).permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer((oauth2) ->

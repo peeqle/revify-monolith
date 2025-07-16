@@ -1,10 +1,11 @@
-package com.revify.monolith.user.service.phone_messaging;
+package com.revify.monolith.user.service.phone_messaging.code;
 
-import com.revify.monolith.keycloak.KeycloakService;
+import com.revify.monolith.user.ActivationSessionHolder;
 import com.revify.monolith.user.models.PhoneVerificationCode;
 import com.revify.monolith.user.models.user.AppUser;
 import com.revify.monolith.user.service.ReadUserService;
 import com.revify.monolith.user.service.WriteUserService;
+import com.revify.monolith.user.service.phone_messaging.PhoneInteractionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
@@ -29,17 +30,23 @@ public class ProdCodeVerification implements CodeVerification {
 
     private final PhoneInteractionService phoneInteractionService;
 
-    private final KeycloakService keycloakService;
+    private final ActivationSessionHolder activationSessionHolder;
 
     @Override
     public HttpStatus checkCodeAndEnable(String phone, String code) {
-        Optional<AppUser> appUserOpt = readUserService.loadUserByPhone(phone);
-        PhoneVerificationCode lastUserCode = phoneInteractionService.findLastUserCode(appUserOpt.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cannot find specified user")));
+        Optional<AppUser> supplier;
+        if (phone == null || phone.isBlank()) {
+            supplier = readUserService.loadUserByEmail(emailFetcher(activationSessionHolder));
+        } else {
+            supplier = readUserService.loadUserByPhone(phone);
+        }
+        PhoneVerificationCode lastUserCode = phoneInteractionService
+                .findLastUserCode(supplier.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cannot find specified user")));
 
-        AppUser appUser = appUserOpt.get();
+        AppUser appUser = supplier.get();
         if (lastUserCode != null) {
             if (lastUserCode.getCode().equals(code)) {
-                return writeUserService.enableUser(appUserOpt.get());
+                return writeUserService.enableUser(appUser);
             }
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, REGISTRATION_CODE_NOT_VALID.name());
         }

@@ -2,8 +2,8 @@ package com.revify.monolith.user.service.phone_messaging;
 
 import com.revify.monolith.user.models.PhoneVerificationCode;
 import com.revify.monolith.user.models.user.AppUser;
+import com.revify.monolith.user.service.phone_messaging.code.CodeGenerator;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 @Service

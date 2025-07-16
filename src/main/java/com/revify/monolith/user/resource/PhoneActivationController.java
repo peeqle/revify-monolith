@@ -2,7 +2,7 @@ package com.revify.monolith.user.resource;
 
 
 import com.revify.monolith.commons.models.auth.Response;
-import com.revify.monolith.user.service.phone_messaging.CodeVerification;
+import com.revify.monolith.user.service.phone_messaging.code.CodeVerification;
 import com.revify.monolith.user.service.phone_messaging.PhoneInteractionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +20,7 @@ public class PhoneActivationController {
     private final PhoneInteractionService phoneInteractionService;
 
     @PostMapping("/phone-code-enable")
-    public ResponseEntity<?> enableWithCode(@RequestParam("phone") String phone, @RequestParam("providedCode") String providedCode) {
+    public ResponseEntity<?> enableWithCode(@RequestParam(value = "phone", required = false) String phone, @RequestParam("providedCode") String providedCode) {
         return ResponseEntity.ok(codeVerifier.checkCodeAndEnable(phone, providedCode));
     }
 
