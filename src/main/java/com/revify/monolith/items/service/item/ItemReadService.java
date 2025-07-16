@@ -1,9 +1,7 @@
 package com.revify.monolith.items.service.item;
 
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.revify.monolith.commons.auth.sync.UserUtils;
+import com.revify.monolith.commons.items.Category;
 import com.revify.monolith.items.model.item.Item;
 import com.revify.monolith.user.service.ReadUserService;
 import lombok.RequiredArgsConstructor;
@@ -13,13 +11,11 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -51,11 +47,15 @@ public class ItemReadService {
     }
 
 
-    public List<Item> findUserItems(Integer offset, Integer limit) {
+    public List<Item> findUserItems(Integer offset, Integer limit, Set<Category> categories) {
         Query query = new Query()
                 .addCriteria(Criteria.where("creatorId").is(UserUtils.getUserId()))
                 .skip((long) offset * limit)
                 .limit(limit);
+
+        if(categories != null && !categories.isEmpty()) {
+            query.addCriteria(Criteria.where("itemDescription.categories").in(categories));
+        }
 
         return mongoTemplate.find(query, Item.class);
     }

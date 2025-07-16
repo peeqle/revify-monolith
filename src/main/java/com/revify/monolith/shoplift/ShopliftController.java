@@ -9,6 +9,7 @@ import com.revify.monolith.shoplift.model.req.Accept_Shoplift;
 import com.revify.monolith.shoplift.model.req.Create_Shoplift;
 import com.revify.monolith.shoplift.service.ShopliftService;
 import lombok.RequiredArgsConstructor;
+import org.bson.types.ObjectId;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -35,21 +36,20 @@ public class ShopliftController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<Shoplift> createShoplift(@RequestBody Create_Shoplift shoplift) {
-        return ResponseEntity.ok(shopliftService.createNew(shoplift));
+    public ResponseEntity<ShopliftDTO> createShoplift(@RequestBody Create_Shoplift shoplift) {
+        return ResponseEntity.ok(cook(shopliftService.createNew(shoplift)));
+    }
+
+    @PostMapping("/attach")
+    public ResponseEntity<?> attachItem(@RequestParam("itemId") ObjectId itemId,
+                                        @RequestParam("shopliftId") ObjectId shopliftId) {
+        shopliftService.addShopliftItem(itemId, shopliftId);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/find")
     public ResponseEntity<List<ShopliftDTO>> findToDestination(@RequestBody Filter filter) {
-        return ResponseEntity.ok(shopliftService.find(filter).stream().map(e -> {
-
-            List<ShopDTO> shopDTOs = new ArrayList<>();
-            for (String shopId : e.getShopIds()) {
-                Shop shop = shopliftService.findShop(shopId);
-                shopDTOs.add(ShopDTO.from(shop));
-            }
-            return ShopliftDTO.from(e, shopDTOs);
-        }).collect(Collectors.toList()));
+        return ResponseEntity.ok(shopliftService.find(filter).stream().map(this::cook).collect(Collectors.toList()));
     }
 
     @PostMapping("/accept")
@@ -65,4 +65,13 @@ public class ShopliftController {
     //courier request to join room for items
 
     //block and delete items from user
+
+    private ShopliftDTO cook(Shoplift shoplift) {
+        List<ShopDTO> shopDTOs = new ArrayList<>();
+        for (String shopId : shoplift.getShopIds()) {
+            Shop shop = shopliftService.findShop(shopId);
+            shopDTOs.add(ShopDTO.from(shop));
+        }
+        return ShopliftDTO.from(shoplift, shopDTOs);
+    }
 }

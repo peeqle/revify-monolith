@@ -1,5 +1,6 @@
 package com.revify.monolith.items;
 
+import com.revify.monolith.commons.items.Category;
 import com.revify.monolith.commons.items.ItemCreationDTO;
 import com.revify.monolith.commons.items.ItemDTO;
 import com.revify.monolith.commons.items.ItemUpdatesDTO;
@@ -18,6 +19,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
 @Slf4j
@@ -72,8 +75,9 @@ public class ItemController {
     }
 
     @PostMapping("/toggle-active")
-    public ResponseEntity<ItemDTO> toggleActiveStatus(@RequestParam ObjectId itemId, @RequestParam boolean active) {
-        Item item = itemWriteService.deactivateItem(itemId, active);
+    public ResponseEntity<ItemDTO> toggleActiveStatus(@RequestParam("itemId") ObjectId itemId,
+                                                      @RequestParam("state") boolean state) {
+        Item item = itemWriteService.toggleItemState(itemId, state);
         if (item != null) {
             return ResponseEntity.ok(ItemUtils.from(item));
         }
@@ -82,8 +86,11 @@ public class ItemController {
 
     @GetMapping("/fetch-paged")
     public ResponseEntity<List<ItemDTO>> fetchItemsPageForCurrentUser(@RequestParam(value = "limit", defaultValue = "10") Integer limit,
-                                                                      @RequestParam(value = "offset", defaultValue = "0") Integer offset) {
-        return ResponseEntity.ok(itemReadService.findUserItems(offset, limit)
+                                                                      @RequestParam(value = "offset", defaultValue = "0") Integer offset,
+                                                                      @RequestParam(value = "categories", required = false) List<String> categories) {
+
+        return ResponseEntity.ok(itemReadService.findUserItems(offset, limit, categories == null ? Collections.emptySet()
+                        : new HashSet<>(categories.stream().map(e -> Category.valueOf(e)).toList()))
                 .stream().map(ItemDTO::from).toList());
     }
 

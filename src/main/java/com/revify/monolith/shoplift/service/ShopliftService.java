@@ -71,17 +71,18 @@ public class ShopliftService {
 
     @KafkaListener(topics = ITEM_ADD_SHOPLIFT)
     public void addItem(@Payload String itemId) {
-        Item byId = itemReadService.findById(itemId);
-        if (byId == null) {
+        Item currentItem = itemReadService.findById(itemId);
+        if (currentItem == null) {
             throw new RuntimeException("Item not found");
         }
-        BigDecimal bigDecimal = currencyService.convertTo(byId.getPrice(), Currency.EUR);
-        Query findForCategoriesQuery = createFindForCategoriesQuery(byId.getItemDescription().getCategories(),
-                byId.getItemDescription().getDestination(),
+        BigDecimal bigDecimal = currencyService.convertTo(currentItem.getPrice(), Currency.EUR);
+        Query findForCategoriesQuery = createFindForCategoriesQuery(
+                currentItem,
                 Price.builder().withAmount(bigDecimal)
                         .withCurrency(Currency.EUR)
                         .build());
-        findForCategoriesQuery.addCriteria(Criteria.where("allowedSystemAppend").is(true));
+        findForCategoriesQuery.addCriteria(Criteria.where("allowedSystemAppend").is(true)
+                .and("creatorId").ne(currentItem.getCreatorId()));
 
         Update update = new Update().push("connectedItems", itemId);
 
@@ -89,25 +90,33 @@ public class ShopliftService {
 
         log.debug("Modified {} elements on [addItem|{}]", result.getModifiedCount(), itemId);
 
-        Set<Category> categories = byId.getItemDescription().getCategories();
+        Set<Category> categories = currentItem.getItemDescription().getCategories();
         if (categories.isEmpty()) {
             throw new RuntimeException("Category not found");
         }
     }
 
-    public void addItem(Item item) {
-        if (item.getShopliftId() == null || item.getShopliftId().isEmpty()) {
-            throw new RuntimeException("Item not found");
+    public void addShopliftItem(ObjectId itemId, ObjectId shopliftId) {
+        addShopliftItem(itemReadService.findById(itemId), shopliftId.toHexString());
+    }
+
+    public void addShopliftItem(Item item, String shopliftId) {
+        if (item == null) {
+            throw new RuntimeException("Item cannot be null");
         }
 
-        Shoplift byId = getById(item.getShopliftId());
-        if (byId == null) {
-            throw new RuntimeException("Item not found");
+        Shoplift currentShoplift = getById(shopliftId);
+        if (currentShoplift == null) {
+            throw new RuntimeException("Shoplift cannot be found");
+        }
+
+        if(item.getItemDescription().getCategories().stream().noneMatch(currentShoplift.getPresentCategories()::contains)) {
+            throw new RuntimeException("Item categories does not satisfy shoplift boundaries");
         }
 
         Update update = new Update().push("connectedItems", item.getId());
 
-        mongoTemplate.updateMulti(Query.query(Criteria.where("_id").is(item.getShopliftId())), update, Shoplift.class);
+        mongoTemplate.updateMulti(Query.query(Criteria.where("_id").is(shopliftId)), update, Shoplift.class);
     }
 
     public void acceptShoplifting(Accept_Shoplift req) {
@@ -163,17 +172,19 @@ public class ShopliftService {
         }
     }
 
-    public Query createFindForCategoriesQuery(Set<Category> categories, GeoLocation itemDestination, Price EURmaxRequiredPrice) {
+    public Query createFindForCategoriesQuery(Item currentItem, Price EURmaxRequiredPrice) {
         if (!EURmaxRequiredPrice.getCurrency().equals(Currency.EUR)) {
             throw new RuntimeException("Method is operating on EUR only");
         }
 
         Query query = new Query();
         Criteria criteria = new Criteria().andOperator(
-                Criteria.where("destination.location").near(itemDestination.getLocation()).maxDistance(10000.0),
-                Criteria.where("category").in(categories),
+                Criteria.where("destination.location").near(currentItem.getItemDescription().getDestination()
+                        .getLocation()).maxDistance(10000.0),
+                Criteria.where("category").in(currentItem.getItemDescription().getCategories()),
                 Criteria.where("EURminEntryDeliveryPrice.amount").lte(EURmaxRequiredPrice.getAmount()),
                 Criteria.where("allowedSystemAppend").is(true),
+                Criteria.where("deliveryCutoffTime").lte(currentItem.getValidUntil()),
                 new Criteria().orOperator(
                         Criteria.where("deliveryCutoffTime").lt(Instant.now().toEpochMilli()),
                         Criteria.where("isRecurrent").is(true)
@@ -231,6 +242,11 @@ public class ShopliftService {
         }
 
         Shoplift newShoplift = Shoplift.from(shoplift);
+        newShoplift.setEURminEntryDeliveryPrice(Price.builder()
+                .withAmount(currencyService.convertTo(shoplift.getMinEntryDeliveryPrice(), Currency.EUR))
+                .withCurrency(Currency.EUR)
+                .build());
+
         newShoplift.setProjectedCategories(projectedCategories);
         newShoplift.setPresentCategories(shoplift.getPresentCategories().stream()
                 .map(Category::valueOf).collect(Collectors.toSet()));
@@ -241,6 +257,8 @@ public class ShopliftService {
         newShoplift.setCreatedAt(Instant.now().toEpochMilli());
         newShoplift.setUpdatedAt(Instant.now().toEpochMilli());
         newShoplift.setIsRecurrent(false);
+        newShoplift.setConnectedItems(new HashSet<>());
+
         return mongoTemplate.save(newShoplift);
     }
 

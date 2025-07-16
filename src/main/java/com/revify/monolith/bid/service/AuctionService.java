@@ -61,7 +61,7 @@ public class AuctionService {
     }
 
     public Auction toggleAuctionStatus(AuctionToggleRequest auctionToggleRequest) {
-        Auction auction = findActiveAuctionForUser(auctionToggleRequest.getItemId());
+        Auction auction = findAuctionForItem(auctionToggleRequest.getItemId());
 
         if (auction == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Active auction not found for item: " + auctionToggleRequest.getItemId());
@@ -75,7 +75,7 @@ public class AuctionService {
     }
 
     public Auction changeAuction(AuctionChangesRequest auctionChangesRequest) {
-        Auction auction = findActiveAuctionForUser(auctionChangesRequest.getItemId());
+        Auction auction = findActiveAuctionForItemAndCreator(auctionChangesRequest.getItemId());
         if (auction == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Active auction not found for item: " + auctionChangesRequest.getItemId());
         }
@@ -88,7 +88,7 @@ public class AuctionService {
         return mongoTemplate.save(auction);
     }
 
-    private Auction findActiveAuctionForUser(String itemId) {
+    private Auction findActiveAuctionForItemAndCreator(String itemId) {
         Query query = Query.query(Criteria.where("itemId").is(itemId)
                 .and("isActive").is(true)
                 .and("creatorId").is(UserUtils.getUserId()));
@@ -131,15 +131,6 @@ public class AuctionService {
         Query query = Query.query(Criteria.where("id").is(auctionId)
                 .and("creatorId").is(UserUtils.getUserId()));
         return mongoTemplate.findOne(query, Auction.class);
-    }
-
-    public Tuple2<Bid, Auction> searchForBid(BidCreationRequest creation) {
-        Auction auction = findActiveAuctionForUser(creation.getItemId());
-        if (auction == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Active auction not found for item: " + creation.getItemId());
-        }
-
-        throw new UnsupportedOperationException("Bid creation logic needs to be implemented in searchForBid");
     }
 
     public Auction findAuction(String auctionId) {
@@ -221,6 +212,7 @@ public class AuctionService {
                 .build();
     }
 
+    //todo replace with delayed queue
     private void saveToRedis(Auction model) {
         long ttl = model.getBidsAcceptingTill() - Instant.now().toEpochMilli();
         if (ttl > 0) {

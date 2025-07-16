@@ -82,13 +82,13 @@ public class ItemWriteService {
                 kafkaTemplate.send(ITEM_ADD_SHOPLIFT, newItem.getId().toHexString());
             }
         } else {
-            shopliftService.addItem(newItem);
+            shopliftService.addShopliftItem(newItem, newItem.getShopliftId());
         }
 
         return newItem;
     }
 
-    public Item deactivateItem(ObjectId itemId, Boolean active) {
+    public Item toggleItemState(ObjectId itemId, Boolean state) {
         Item item = mongoTemplate.findById(itemId, Item.class);
         if (item == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not found");
@@ -97,7 +97,7 @@ public class ItemWriteService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot modify this item");
         }
 
-        item.setActive(active);
+        item.setActive(state);
         item.setManuallyToggled(true);
 
         item = mongoTemplate.save(item);
@@ -105,7 +105,7 @@ public class ItemWriteService {
         //auction deactivation
         auctionService.toggleAuctionStatus(AuctionToggleRequest.builder()
                 .manuallyToggled(true)
-                .status(active)
+                .status(state)
                 .itemId(item.getId().toHexString())
                 .build());
 
