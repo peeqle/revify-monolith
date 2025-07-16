@@ -2,7 +2,7 @@ package com.revify.monolith.user.resource;
 
 
 import com.revify.monolith.commons.models.auth.Response;
-import com.revify.monolith.user.service.UserService;
+import com.revify.monolith.user.service.phone_messaging.CodeVerification;
 import com.revify.monolith.user.service.phone_messaging.PhoneInteractionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -15,13 +15,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/account-activities")
 @RequiredArgsConstructor
 public class PhoneActivationController {
-    private final UserService userService;
+    private final CodeVerification codeVerifier;
 
     private final PhoneInteractionService phoneInteractionService;
 
     @PostMapping("/phone-code-enable")
     public ResponseEntity<?> enableWithCode(@RequestParam("phone") String phone, @RequestParam("providedCode") String providedCode) {
-        return ResponseEntity.ok(userService.checkCodeAndEnable(phone, providedCode));
+        return ResponseEntity.ok(codeVerifier.checkCodeAndEnable(phone, providedCode));
     }
 
     @PostMapping("/phone-code-resend")

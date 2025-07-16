@@ -23,6 +23,7 @@ import com.revify.monolith.user.service.util.UserValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -30,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.Period;
@@ -100,6 +102,21 @@ public class WriteUserService extends CrudService<AppUser> {
             deleteUser(storedUser.getId());
             throw new RuntimeException("Timeout while creating Keycloak user.", e);
         }
+    }
+
+    @Transactional
+    public HttpStatus enableUser(AppUser appUser) {
+        appUser.setEnabled(true);
+        store(appUser);
+
+        try {
+            keycloakService.changeUserAvailability(appUser.getUsername(), true);
+        } catch (Exception e) {
+            log.error("Cannot update user after code being accepted.", e);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+        phoneInteractionService.removeAllForUser(appUser);
+        return HttpStatus.OK;
     }
 
     @Transactional(propagation = Propagation.REQUIRED)

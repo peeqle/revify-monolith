@@ -130,29 +130,4 @@ public class UserService {
         }
         return updateUserResponse;
     }
-
-    public HttpStatus checkCodeAndEnable(String phone, String code) {
-        Optional<AppUser> appUserOpt = readUserService.loadUserByPhone(phone);
-        PhoneVerificationCode lastUserCode = phoneInteractionService.findLastUserCode(appUserOpt.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cannot find specified user")));
-
-        AppUser appUser = appUserOpt.get();
-        if (lastUserCode != null) {
-            if (lastUserCode.getCode().equals(code) || environment.matchesProfiles("dev")) {
-                appUser.setEnabled(true);
-                writeUserService.store(appUser);
-
-                try {
-                    keycloakService.changeUserAvailability(appUser.getUsername(), true);
-                } catch (Exception e) {
-                    log.error("Cannot update user after code being accepted.", e);
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-                }
-                phoneInteractionService.removeAllForUser(appUser);
-                return HttpStatus.OK;
-            }
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, REGISTRATION_CODE_NOT_VALID.name());
-        }
-        phoneInteractionService.removeAllForUser(appUser);
-        throw new ResponseStatusException(HttpStatus.NOT_FOUND, USER_NOT_PERSIST.name());
-    }
 }
