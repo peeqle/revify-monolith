@@ -27,7 +27,6 @@ import java.util.List;
 @EnableWebSocketMessageBroker
 public class WsConfiguration implements WebSocketMessageBrokerConfigurer {
 
-
     private final ApplicationContext applicationContext;
 
     private final AuthorizationManager<Message<?>> authorizationManager;
@@ -42,6 +41,7 @@ public class WsConfiguration implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         config.enableStompBrokerRelay("/topic", "/queue");
+        config.enableSimpleBroker("/subscribe");
         config.setApplicationDestinationPrefixes("/app");
     }
 

@@ -23,6 +23,8 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Instant;
 import java.util.List;
 
+import static com.revify.monolith.RabbitQueues.ITEM_BID;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -118,7 +120,7 @@ public class ManagementService {
             lastBidForAuction = tryCreateBid(auction, newBid, lastBidForAuction, countLastBids(auction));
         }
 
-        simpMessagingTemplate.convertAndSend("/topic/bids/update/" + auction.getItemId(), BidDTO.from(lastBidForAuction));
+        simpMessagingTemplate.convertAndSend(ITEM_BID + auction.getItemId(), BidDTO.from(lastBidForAuction));
 
         return lastBidForAuction;
     }
