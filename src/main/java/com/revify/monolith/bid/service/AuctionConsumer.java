@@ -6,12 +6,17 @@ import com.revify.monolith.commons.messaging.ConsumerGroups;
 import com.revify.monolith.commons.messaging.KafkaTopic;
 import com.revify.monolith.commons.models.bid.AuctionChangesRequest;
 import com.revify.monolith.commons.models.bid.AuctionCreationRequest;
-import com.revify.monolith.commons.models.bid.AuctionToggleRequest;
+import com.revify.monolith.items.model.ItemEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
+
+import java.time.Instant;
+
+import static com.revify.monolith.RabbitQueues.ITEM_UPDATE;
 
 @Slf4j
 @Component
@@ -20,27 +25,9 @@ public class AuctionConsumer {
 
     private final AuctionService auctionService;
 
-    private final Gson gson = new GsonBuilder().create();
+    private final SimpMessagingTemplate messagingTemplate;
 
-//    @KafkaListener(topics = KafkaTopic.AUCTION_CREATION, groupId = ConsumerGroups.BIDS)
-//    public void listenAuctionCreation(@Payload String message) {
-//        System.out.println("Received Message: " + message);
-//
-//        AuctionCreationRequest auctionCreationRequest = gson.fromJson(message, AuctionCreationRequest.class);
-//        if (message != null && !message.isEmpty() && auctionCreationRequest != null) {
-//            auctionService.createAuction(auctionCreationRequest);
-//        }
-//    }
-//
-//    @KafkaListener(topics = KafkaTopic.AUCTION_DEACTIVATION, groupId = ConsumerGroups.BIDS)
-//    public void listenAuctionDeactivation(@Payload String message) {
-//        System.out.println("Received Message: " + message);
-//
-//        AuctionToggleRequest auctionToggleRequest = gson.fromJson(message, AuctionToggleRequest.class);
-//        if (message != null && !message.isEmpty() && auctionToggleRequest != null) {
-//            auctionService.toggleAuctionStatus(auctionToggleRequest);
-//        }
-//    }
+    private final Gson gson = new GsonBuilder().create();
 
 
     //todo handle errors with auction
@@ -51,6 +38,11 @@ public class AuctionConsumer {
         AuctionChangesRequest auctionChangesRequest = gson.fromJson(message, AuctionChangesRequest.class);
         if (message != null && !message.isEmpty() && auctionChangesRequest != null) {
             auctionService.changeAuction(auctionChangesRequest);
+
+            messagingTemplate.convertAndSend(ITEM_UPDATE + auctionChangesRequest.getItemId(), ItemEvent.builder()
+                    .activeAt(Instant.now().toEpochMilli())
+                    .type(ItemEvent.ItemEventType.UPDATE)
+                    .build());
         }
     }
 

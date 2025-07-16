@@ -5,8 +5,8 @@ import com.google.gson.GsonBuilder;
 import com.revify.monolith.commons.auth.sync.UserUtils;
 import com.revify.monolith.commons.items.Duration;
 import com.revify.monolith.commons.items.ItemUpdatesDTO;
-import com.revify.monolith.commons.messaging.dto.FanoutMessageBody;
 import com.revify.monolith.commons.models.bid.AuctionChangesRequest;
+import com.revify.monolith.items.model.ItemEvent;
 import com.revify.monolith.items.model.item.Item;
 import com.revify.monolith.items.model.item.ItemPremium;
 import com.revify.monolith.items.model.util.ItemChangesComparator;
@@ -16,12 +16,14 @@ import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 
+import static com.revify.monolith.RabbitQueues.ITEM_UPDATE;
 import static com.revify.monolith.commons.messaging.KafkaTopic.AUCTION_CHANGES;
 
 @Service
@@ -34,6 +36,8 @@ public class ItemService {
     private final ItemReadService itemReadService;
 
     private final KafkaTemplate<String, String> kafkaTemplate;
+
+    private final SimpMessagingTemplate messagingTemplate;
 
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
@@ -92,9 +96,10 @@ public class ItemService {
         //todo decide if we can change geoLocation of delivery, if-that so change timespan of changes acceptance
 
         existing = mongoTemplate.save(existing);
-        fanoutNotificationProducer.sendFanout(FanoutMessageBody.builder()
-                .title("Created new item")
-                .body("Notification from item creation")
+
+        messagingTemplate.convertAndSend(ITEM_UPDATE + existing.getId().toHexString(), ItemEvent.builder()
+                .activeAt(Instant.now().toEpochMilli())
+                .type(ItemEvent.ItemEventType.UPDATE)
                 .build());
 
         return existing;

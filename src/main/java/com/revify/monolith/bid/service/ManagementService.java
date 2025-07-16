@@ -7,7 +7,7 @@ import com.revify.monolith.commons.auth.sync.UserUtils;
 import com.revify.monolith.commons.bids.BidDTO;
 import com.revify.monolith.commons.models.bid.BidCreationRequest;
 import com.revify.monolith.currency_reader.service.CurrencyService;
-import com.revify.monolith.items.service.item.ItemReadService;
+import com.revify.monolith.items.model.ItemEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
@@ -24,6 +24,7 @@ import java.time.Instant;
 import java.util.List;
 
 import static com.revify.monolith.RabbitQueues.ITEM_BID;
+import static com.revify.monolith.RabbitQueues.ITEM_UPDATE;
 
 @Slf4j
 @Service
@@ -176,6 +177,11 @@ public class ManagementService {
         if (auction == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found for item: " + auctionId);
         }
+
+        simpMessagingTemplate.convertAndSend(ITEM_UPDATE + auction.getItemId(), ItemEvent.builder()
+                .activeAt(Instant.now().toEpochMilli())
+                .type(ItemEvent.ItemEventType.FINISH)
+                .build());
 
         Bid bid = findById(selectedBid);
         if (bid == null) {

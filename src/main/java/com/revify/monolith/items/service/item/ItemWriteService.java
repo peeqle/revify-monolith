@@ -102,14 +102,12 @@ public class ItemWriteService {
 
         item = mongoTemplate.save(item);
 
-        {
-            //auction deactivation
-            auctionService.toggleAuctionStatus(AuctionToggleRequest.builder()
-                    .manuallyToggled(true)
-                    .status(active)
-                    .itemId(item.getId().toHexString())
-                    .build());
-        }
+        //auction deactivation
+        auctionService.toggleAuctionStatus(AuctionToggleRequest.builder()
+                .manuallyToggled(true)
+                .status(active)
+                .itemId(item.getId().toHexString())
+                .build());
 
         return item;
     }
